@@ -232,6 +232,20 @@ def main():
     try:
         server.login(config.EMAIL, config.PASSWORD)
         logger.info("Successfully logged in")
+        # 发送 Telegram 消息
+        # 获取语言设置
+        language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
+
+        # 定义语言映射
+        language_map = {}
+        if language == 'English':
+            language_map['sm'] = 'Successfully logged in'
+        else:  # Chinese
+            language_map['sm'] = '登录成功'
+
+        # 使用语言映射构建消息
+        message = language_map['sm']
+        asyncio.run(send_telegram_message(message))
 
         # 为每个文件夹创建一个线程
         threads = []
