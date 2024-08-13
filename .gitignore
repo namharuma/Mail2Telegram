@@ -1,0 +1,6 @@
+.*
+*.pyc
+config.yml
+!.gitignore
+logs/*
+config.py
