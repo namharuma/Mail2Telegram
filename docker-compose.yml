@@ -5,13 +5,14 @@ services:
     build: .
     restart: always
     environment:
-      - CONFIG_FILE=/app/config.py  # 设置环境变量来指向配置文件
+      - CONFIG_FILE=/app/config.py
+      - LANGUAGE=Chinese  # or English
+      - TIMEZONE=Asia/Shanghai # set the timezone
     volumes:
-      - ./config.py:/app/config.py  # 挂载当前目录的 config.py 到容器中
+      - ./config.py:/app/config.py
     deploy:
       resources:
         limits:
           memory: 256M
     logging:
       driver: "none"
-

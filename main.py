@@ -1,3 +1,4 @@
+import os
 import threading
 from email.utils import parsedate_to_datetime
 import imaplib2
@@ -106,12 +107,15 @@ def fetch_email(server, msg_num):
         email_message = email.message_from_bytes(bytes_data)
         email_date = parsedate_to_datetime(email_message['Date'])
 
-        # 将邮件时间转换为北京时间
-        beijing_tz = pytz.timezone('Asia/Shanghai')
-        beijing_time = email_date.astimezone(beijing_tz)
+        timezone_str = os.environ.get('TIMEZONE', 'Asia/Shanghai')  # Default to 'Asia/Shanghai'
+        try:
+            email_timezone = pytz.timezone(timezone_str)
+        except pytz.UnknownTimeZoneError:
+            logger.error(f"Invalid timezone specified: {timezone_str}. Using 'Asia/Shanghai' instead.")
+            email_timezone = pytz.timezone('Asia/Shanghai')
 
-        # 格式化北京时间显示（YYYY-MM-DD HH:MM:SS）
-        formatted_time = beijing_time.strftime('%Y-%m-%d %H:%M:%S')
+        email_time = email_date.astimezone(email_timezone)
+        formatted_time = email_time.strftime('%Y-%m-%d %H:%M:%S')
 
         logging.info(f"处理邮件，日期: {formatted_time}")
 
@@ -134,11 +138,30 @@ def fetch_email(server, msg_num):
 
         content = get_email_content(email_message)
 
-        message = (f"<b>新邮件来自 {escape_html(account_email)}:</b>\n"
-                   f"<b>发件人:</b> {escape_html(from_)}\n"
-                   f"<b>主题:</b> {escape_html(subject)}\n"
-                   f"<b>日期:</b> {formatted_time}\n\n"
-                   f"<b>内容:</b>\n{content}")
+        # 获取语言设置
+        language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
+
+        # 定义语言映射
+        language_map = {}
+        if language == 'English':
+            language_map['new_email'] = 'New email from '
+            language_map['sender'] = 'Sender: '
+            language_map['subject'] = 'Subject: '
+            language_map['date'] = 'Date: '
+            language_map['content'] = 'Content:\n'
+        else:  # Chinese
+            language_map['new_email'] = '新邮件来自 '
+            language_map['sender'] = '发件人: '
+            language_map['subject'] = '主题: '
+            language_map['date'] = '日期: '
+            language_map['content'] = '内容:\n'
+
+        # 使用语言映射构建消息
+        message = (f"<b>{language_map['new_email']}{escape_html(account_email)}:</b>\n"
+                   f"<b>{language_map['sender']}</b> {escape_html(from_)}\n"
+                   f"<b>{language_map['subject']}</b> {escape_html(subject)}\n"
+                   f"<b>{language_map['date']}</b> {formatted_time}\n\n"
+                   f"<b>{language_map['content']}</b>\n{content}")
 
         # 发送 Telegram 消息
         asyncio.run(send_telegram_message(message))
