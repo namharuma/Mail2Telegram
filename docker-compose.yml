@@ -7,7 +7,7 @@ services:
     environment:
       - CONFIG_FILE=/app/config.py
       - LANGUAGE=Chinese  # or English
-      - TIMEZONE=Asia/Shanghai # set the timezone
+      - TIMEZONE=Asia/Shanghai # set your preferred timezone
     volumes:
       - ./config.py:/app/config.py
     deploy:
