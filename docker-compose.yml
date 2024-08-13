@@ -10,9 +10,3 @@ services:
       - TIMEZONE=Asia/Shanghai # set your preferred timezone
     volumes:
       - ./config.py:/app/config.py
-    deploy:
-      resources:
-        limits:
-          memory: 256M
-    logging:
-      driver: "none"
