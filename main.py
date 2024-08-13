@@ -78,16 +78,29 @@ def get_email_content(email_message):
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition"))
 
-            if content_type == "text/plain" and "attachment" not in content_disposition:
-                content += html.unescape(decode_part(part))  # 处理转义字符
-            elif content_type == "text/html" and "attachment" not in content_disposition:
-                if not content:  # 如果纯文本为空，尝试解析HTML
-                    soup = BeautifulSoup(part.get_payload(decode=True), "html.parser")
+            if content_type == "text/html" and "attachment" not in content_disposition:
+                try:
+                    html_content = part.get_payload(decode=True).decode(errors='ignore')
+                    soup = BeautifulSoup(html_content, "html.parser")
                     content += soup.get_text(separator='\n')  # 获取文本内容，保留换行符
+                    break  # 优先使用HTML内容，解析成功后跳出循环
+                except Exception as e:
+                    logging.error(f"提取HTML内容时出错: {str(e)}")
+
+        # 如果没有成功解析HTML内容，尝试解析纯文本内容
+        if not content:
+            for part in email_message.walk():
+                content_type = part.get_content_type()
+                content_disposition = str(part.get("Content-Disposition"))
+
+                if content_type == "text/plain" and "attachment" not in content_disposition:
+                    content += html.unescape(decode_part(part))  # 处理转义字符
+                    break
     else:
-        content = html.unescape(decode_part(email_message))  # 处理转义字符
+        content = html.unescape(decode_part(email_message))  # 处理非多部分邮件
 
     return html.escape(content[:3000]) + "..." if len(content) > 3000 else html.escape(content)
+
 
 
 async def send_telegram_message(message):
