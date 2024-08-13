@@ -35,7 +35,7 @@ services:
 docker-compose up
 ```
 
-5. The service is running successfully when you see a login success message.
+5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
 
 ## Best Practices
 
