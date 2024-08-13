@@ -17,13 +17,25 @@ cd ./mail2telegram
    - 复制 `config-template.py` 并重命名为 `config.py`
    - 填写必要的配置信息（仅支持 Outlook 邮箱，且不支持开启两步验证的邮箱）
 
-3. 启动服务：
+3. 配置 `docker-compose.yml`：
+   - 打开 `docker-compose.yml` 文件并添加以下环境变量：
+
+```yaml
+services:
+  mail2telegram:
+    # ... 其他配置 ...
+    environment:
+      - LANGUAGE=Chinese  # 或 English
+      - TIMEZONE=Asia/Shanghai  # 设置您的首选时区
+```
+
+4. 启动服务：
 
 ```bash
 docker-compose up
 ```
 
-4. 当看到登录成功的提示时，服务即成功运行。
+5. 当看到登录成功的提示时，服务即成功运行。
 
 ## 最佳实践
 
@@ -48,3 +60,4 @@ graph TD
 - 仅支持 Outlook 邮箱作为中转邮箱
 - 不支持开启两步验证的邮箱
 - 确保您的 Outlook 邮箱安全设置允许第三方应用访问
+- 在 `docker-compose.yml` 中设置正确的语言和时区以获得最佳使用体验
