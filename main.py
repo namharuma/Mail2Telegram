@@ -70,6 +70,8 @@ def html_to_text(part):
         logging.error(f"提取HTML内容时出错: {str(e)}")
         return ""
 
+import re
+
 def get_email_content(email_message):
     content = ""
 
@@ -82,7 +84,14 @@ def get_email_content(email_message):
                 try:
                     html_content = part.get_payload(decode=True).decode(errors='ignore')
                     soup = BeautifulSoup(html_content, "html.parser")
-                    content += soup.get_text(separator='\n')  # 获取文本内容，保留换行符
+
+                    # 移除不必要的HTML标签和注释
+                    for script in soup(["script", "style", "meta", "noscript"]):
+                        script.extract()  # 删除script, style, meta, noscript标签
+
+                    content = soup.get_text(separator='\n')  # 获取文本内容，保留换行符
+                    content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
+                    content = content.strip()  # 移除开头和结尾的空白字符
                     break  # 优先使用HTML内容，解析成功后跳出循环
                 except Exception as e:
                     logging.error(f"提取HTML内容时出错: {str(e)}")
@@ -94,12 +103,22 @@ def get_email_content(email_message):
                 content_disposition = str(part.get("Content-Disposition"))
 
                 if content_type == "text/plain" and "attachment" not in content_disposition:
-                    content += html.unescape(decode_part(part))  # 处理转义字符
+                    content = html.unescape(decode_part(part))  # 处理转义字符
+                    content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
+                    content = content.strip()  # 移除开头和结尾的空白字符
                     break
     else:
         content = html.unescape(decode_part(email_message))  # 处理非多部分邮件
+        content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
+        content = content.strip()  # 移除开头和结尾的空白字符
 
-    return html.escape(content[:3000]) + "..." if len(content) > 3000 else html.escape(content)
+    # 设置最大消息长度（例如3000字符）
+    max_length = 3000
+    if len(content) > max_length:
+        content = content[:max_length] + "..."
+
+    return html.escape(content)
+
 
 
 
@@ -172,9 +191,9 @@ def fetch_email(server, msg_num):
             language_map['content'] = '内容:\n'
 
         # 使用语言映射构建消息
-        message = (f"<b>{language_map['new_email']}{escape_html(account_email)}:</b>\n"
+        message = (f"<b>{language_map['subject']}</b> {escape_html(subject)}\n"
+                   f"<b>{language_map['new_email']}{escape_html(account_email)}:</b>\n"
                    f"<b>{language_map['sender']}</b> {escape_html(from_)}\n"
-                   f"<b>{language_map['subject']}</b> {escape_html(subject)}\n"
                    f"<b>{language_map['date']}</b> {formatted_time}\n\n"
                    f"<b>{language_map['content']}</b>\n{content}")
 
