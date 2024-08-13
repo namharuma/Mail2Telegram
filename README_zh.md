@@ -32,7 +32,7 @@ services:
 4. 启动服务：
 
 ```bash
-docker-compose up
+docker-compose up -d
 ```
 
 5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
