@@ -32,7 +32,7 @@ services:
 4. Start the service:
 
 ```bash
-docker-compose up
+docker-compose up -d
 ```
 
 5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
