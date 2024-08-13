@@ -79,14 +79,16 @@ def get_email_content(email_message):
             content_disposition = str(part.get("Content-Disposition"))
 
             if content_type == "text/plain" and "attachment" not in content_disposition:
-                content += decode_part(part)
+                content += html.unescape(decode_part(part))  # 处理转义字符
             elif content_type == "text/html" and "attachment" not in content_disposition:
                 if not content:  # 如果纯文本为空，尝试解析HTML
-                    content += html_to_text(part)
+                    soup = BeautifulSoup(part.get_payload(decode=True), "html.parser")
+                    content += soup.get_text(separator='\n')  # 获取文本内容，保留换行符
     else:
-        content = decode_part(email_message)
+        content = html.unescape(decode_part(email_message))  # 处理转义字符
 
     return html.escape(content[:3000]) + "..." if len(content) > 3000 else html.escape(content)
+
 
 async def send_telegram_message(message):
     config = load_config()
