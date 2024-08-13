@@ -6,7 +6,6 @@ services:
     restart: always
     environment:
       - CONFIG_FILE=/app/config.py  # 设置环境变量来指向配置文件
-      - DISABLE_LOGGING=true
     volumes:
       - ./config.py:/app/config.py  # 挂载当前目录的 config.py 到容器中
     deploy:
