@@ -42,7 +42,7 @@ RETRY_PAUSE = 600  # Pause time after multiple failed retries, in seconds
 ```
 
 3. Configure `docker-compose.yml`:
-   - Open the `docker-compose.yml` file and add the following environment variables:
+   - Open the `docker-compose.yml` file and change the following environment variables:
 
 ```yaml
 services:
