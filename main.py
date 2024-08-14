@@ -246,6 +246,7 @@ def idle_mail_listener(email_config, folder):
     RETRY_LIMIT = config.RETRY_LIMIT
     RECONNECT_INTERVAL = config.RECONNECT_INTERVAL
     RETRY_DELAY = config.RETRY_DELAY
+    RETRY_PAUSE = config.RETRY_PAUSE  # 新增：重试暂停时间
     retry_count = 0
 
     # 确定邮件提供商
@@ -346,37 +347,27 @@ def idle_mail_listener(email_config, folder):
 
                     time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
 
+
+
         except Exception as e:
-            error_message = f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}"
-            logger.error(error_message)
+            logger.error(f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}")
             retry_count += 1
-            # 发送报错信息到Telegram
-            asyncio.run(
-
-                send_telegram_message(f"Error in idle_mail_listener for {email_config['EMAIL']} - {folder}: {str(e)}"))
-
             if retry_count >= RETRY_LIMIT:
-                final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。停止监听。"
-
+                final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
                 logger.error(final_message)
-
                 asyncio.run(send_telegram_message(final_message))
-
-                break  # 当达到重试限制时退出while循环
-
-            time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
-
-
+                time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
+                retry_count = 0  # 重置重试计数以继续重试
+            else:
+                time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
         finally:
             try:
                 server.logout()
                 logger.debug(f"登出 {email_config['EMAIL']} 的文件夹: {folder}")
             except:
                 pass
-
-        if retry_count >= RETRY_LIMIT:
-            break  # 确保在达到重试限制时退出循环
         last_reconnect_time = time.time()  # 重新记录连接时间
+
 def main():
     config = load_config()
     logger.info("开始监听多个邮箱账户")
