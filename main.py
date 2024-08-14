@@ -1,4 +1,5 @@
 import os
+import re
 import threading
 from email.utils import parsedate_to_datetime
 import imaplib2
@@ -19,8 +20,11 @@ logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %
 logger = logging.getLogger(__name__)
 
 
+
 # 要监听的文件夹
 FOLDERS = ["INBOX", "Junk"]
+LOGIN_SUCCESS = []
+
 
 def load_config():
     import config
@@ -61,16 +65,34 @@ def get_forwarded_email_info(email_message, account_email):
 def escape_html(text):
     return html.escape(text)
 
+def clean_html_content(html_content):
+    soup = BeautifulSoup(html_content, "html.parser")
+
+    # 删除不需要的标签
+    for tag in soup(["script", "style", "meta", "noscript", "head", "title", "link", "iframe"]):
+        tag.extract()
+
+    # 删除空标签
+    for tag in soup.find_all():
+        if not tag.text.strip():
+            tag.extract()
+
+    # 获取清理后的文本
+    text = soup.get_text(separator='\n')
+
+    # 移除多余的换行和空白行
+    text = re.sub(r'\n\s*\n', '\n\n', text).strip()
+
+    return text
+
 def html_to_text(part):
     try:
         html_content = part.get_payload(decode=True).decode(errors='ignore')
-        soup = BeautifulSoup(html_content, "html.parser")
-        return soup.get_text()
+        cleaned_text = clean_html_content(html_content)
+        return cleaned_text
     except Exception as e:
         logging.error(f"提取HTML内容时出错: {str(e)}")
         return ""
-
-import re
 
 def get_email_content(email_message):
     content = ""
@@ -81,20 +103,9 @@ def get_email_content(email_message):
             content_disposition = str(part.get("Content-Disposition"))
 
             if content_type == "text/html" and "attachment" not in content_disposition:
-                try:
-                    html_content = part.get_payload(decode=True).decode(errors='ignore')
-                    soup = BeautifulSoup(html_content, "html.parser")
-
-                    # 移除不必要的HTML标签和注释
-                    for script in soup(["script", "style", "meta", "noscript"]):
-                        script.extract()  # 删除script, style, meta, noscript标签
-
-                    content = soup.get_text(separator='\n')  # 获取文本内容，保留换行符
-                    content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
-                    content = content.strip()  # 移除开头和结尾的空白字符
-                    break  # 优先使用HTML内容，解析成功后跳出循环
-                except Exception as e:
-                    logging.error(f"提取HTML内容时出错: {str(e)}")
+                content = html_to_text(part)
+                if content:  # 成功解析HTML内容后跳出循环
+                    break
 
         # 如果没有成功解析HTML内容，尝试解析纯文本内容
         if not content:
@@ -103,14 +114,12 @@ def get_email_content(email_message):
                 content_disposition = str(part.get("Content-Disposition"))
 
                 if content_type == "text/plain" and "attachment" not in content_disposition:
-                    content = html.unescape(decode_part(part))  # 处理转义字符
-                    content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
-                    content = content.strip()  # 移除开头和结尾的空白字符
+                    content = html.unescape(decode_part(part))
+                    content = re.sub(r'\n\s*\n', '\n\n', content).strip()
                     break
     else:
-        content = html.unescape(decode_part(email_message))  # 处理非多部分邮件
-        content = re.sub(r'\n\s*\n', '\n\n', content)  # 移除多余的空白行
-        content = content.strip()  # 移除开头和结尾的空白字符
+        content = html.unescape(decode_part(email_message))
+        content = re.sub(r'\n\s*\n', '\n\n', content).strip()
 
     # 设置最大消息长度（例如3000字符）
     max_length = 3000
@@ -120,8 +129,6 @@ def get_email_content(email_message):
     return html.escape(content)
 
 
-
-
 async def send_telegram_message(message):
     config = load_config()
     TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN  # 从配置文件中加载
@@ -129,19 +136,23 @@ async def send_telegram_message(message):
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     await app.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
 
-# 原有 main2.py 中的 fetch_email 函数增强为发送 Telegram 消息
 
-def fetch_email(server, msg_num):
+def run_in_thread(loop, coro):
+    asyncio.set_event_loop(loop)
+    loop.run_until_complete(coro)
+    loop.run_until_complete(loop.shutdown_asyncgens())
+    loop.close()
+
+def fetch_email(server, msg_num, email_config):
     logger.debug(f"Fetching email with message number: {msg_num}")
     try:
-        config = load_config()
         _, data = server.fetch(msg_num, "(RFC822)")
         _, bytes_data = data[0]
 
         email_message = email.message_from_bytes(bytes_data)
         email_date = parsedate_to_datetime(email_message['Date'])
 
-        timezone_str = os.environ.get('TIMEZONE', 'Asia/Shanghai')  # Default to 'Asia/Shanghai'
+        timezone_str = os.environ.get('TIMEZONE', 'Asia/Shanghai')
         try:
             email_timezone = pytz.timezone(timezone_str)
         except pytz.UnknownTimeZoneError:
@@ -159,23 +170,18 @@ def fetch_email(server, msg_num):
 
         from_ = email_message["From"]
 
-        # 检查是否是转发邮件
-        original_recipient, original_sender = get_forwarded_email_info(email_message, config.EMAIL)
+        original_recipient, original_sender = get_forwarded_email_info(email_message, email_config['EMAIL'])
 
         if original_recipient and original_sender:
-            # 如果是转发邮件，使用原始收件人
             account_email = original_recipient
             from_ = original_sender
         else:
-            # 如果不是转发邮件，使用当前账户邮箱
-            account_email = config.EMAIL
+            account_email = email_config['EMAIL']
 
         content = get_email_content(email_message)
 
-        # 获取语言设置
-        language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
+        language = os.environ.get('LANGUAGE', 'Chinese')
 
-        # 定义语言映射
         language_map = {}
         if language == 'English':
             language_map['new_email'] = 'New email from '
@@ -183,123 +189,198 @@ def fetch_email(server, msg_num):
             language_map['subject'] = 'Subject: '
             language_map['date'] = 'Date: '
             language_map['content'] = 'Content:\n'
-        else:  # Chinese
+        else:
             language_map['new_email'] = '新邮件来自 '
             language_map['sender'] = '发件人: '
             language_map['subject'] = '主题: '
             language_map['date'] = '日期: '
             language_map['content'] = '内容:\n'
 
-        # 使用语言映射构建消息
         message = (f"<b>{language_map['subject']}</b> {escape_html(subject)}\n"
                    f"<b>{language_map['new_email']}{escape_html(account_email)}:</b>\n"
                    f"<b>{language_map['sender']}</b> {escape_html(from_)}\n"
                    f"<b>{language_map['date']}</b> {formatted_time}\n\n"
                    f"<b>{language_map['content']}</b>\n{content}")
 
-        # 发送 Telegram 消息
-        asyncio.run(send_telegram_message(message))
+        # 创建一个新的事件循环
+        loop = asyncio.new_event_loop()
+        t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message)))
+        t.start()
+        t.join()
 
     except Exception as e:
         logger.error(f"Error fetching email: {e}")
 
-# 监听新邮件的逻辑保持不变
-# 修改后的 idle_mail_listener，接收并创建独立的IMAP连接
-# 修改后的 idle_mail_listener，接收单个参数 folder
-def idle_mail_listener(folder):
+
+def monitor_email(email_config):
+    threads = []
+    for folder in FOLDERS:
+        thread = threading.Thread(target=idle_mail_listener, args=(email_config, folder))
+        threads.append(thread)
+        thread.start()
+
+    for thread in threads:
+        thread.join()
+
+
+def get_folder_name(folders, folder_type, email_provider):
+    if email_provider == 'gmail':
+        for f in folders:
+            decoded = f.decode()
+            if f'\\{folder_type}' in decoded:
+                match = re.search(r'"([^"]*)"$', decoded)
+                if match:
+                    return match.group(1)
+    else:
+        # For other providers, we'll use the folder_type directly
+        return folder_type
+    return None
+
+
+def idle_mail_listener(email_config, folder):
     config = load_config()
-    server = imaplib2.IMAP4_SSL(config.IMAP_SERVER, config.IMAP_SERVER_PORT)
+    RETRY_LIMIT = config.RETRY_LIMIT
+    RECONNECT_INTERVAL = config.RECONNECT_INTERVAL
+    RETRY_DELAY = config.RETRY_DELAY
+    retry_count = 0
 
-    try:
-        server.login(config.EMAIL, config.PASSWORD)
-        logger.info(f"Successfully logged in for folder: {folder}")
-        logger.info(f"Starting IDLE listener for folder: {folder}")
-        server.select(folder)
+    # Determine email provider
+    email_provider = 'gmail' if 'gmail.com' in email_config['EMAIL'] else 'other'
 
-        # 获取当前邮件数量,用于跳过现有邮件
-        _, msgnums = server.search(None, "ALL")
-        last_email_count = len(msgnums[0].split())
-        logger.debug(f"Initial email count in {folder}: {last_email_count}")
+    while retry_count < RETRY_LIMIT:
+        server = imaplib2.IMAP4_SSL(email_config['IMAP_SERVER'], email_config['IMAP_SERVER_PORT'])
+        last_reconnect_time = time.time()
 
-        def callback(args):
-            if args[2]:
-                logger.debug(f"Server notified of changes in {folder}")
-                return True
-            return False
-
-        stop_event = Event()
-
-        while not stop_event.is_set():
-            try:
-                server.idle(callback=callback, timeout=60)
-
-                # 检查新邮件
-                _, msgnums = server.search(None, "ALL")
-                email_count = len(msgnums[0].split())
-
-                if email_count > last_email_count:
-                    new_emails = range(last_email_count + 1, email_count + 1)
-                    for num in new_emails:
-                        fetch_email(server, str(num))
-                    last_email_count = email_count
-
-            except Exception as e:
-                logger.error(f"Error in IDLE loop for folder {folder}: {e}")
-                time.sleep(5)  # 出错时等待一段时间再重试
-
-    except Exception as e:
-        logger.error(f"Error in idle_mail_listener for folder {folder}: {e}")
-    finally:
         try:
-            server.logout()
-            logger.info(f"Logged out from server for folder: {folder}")
-        except:
-            pass
+            server.login(email_config['EMAIL'], email_config['PASSWORD'])
+            logger.info(f"成功登录邮箱 {email_config['EMAIL']}")
 
-# 主函数保持不变
-# 主函数，增加线程支持
+            # 列出可用的文件夹
+            _, folders = server.list()
+
+            # 获取实际的文件夹名称
+            if folder == "INBOX":
+                actual_folder = "INBOX"
+            else:
+                actual_folder = get_folder_name(folders, folder, email_provider)
+
+            if not actual_folder:
+                raise Exception(f"找不到对应的文件夹: {folder}")
+
+            # 选择文件夹
+            status, messages = server.select(actual_folder)
+            if status != "OK":
+                raise Exception(f"无法选择文件夹 {actual_folder}: {messages}")
+
+            logger.info(f"成功选择文件夹: {actual_folder}")
+
+
+            # 获取语言设置
+            language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
+
+            # 定义语言映射
+            if email_config['EMAIL'] not in LOGIN_SUCCESS:
+                language_map = {}
+                if language == 'English':
+                    language_map['sm'] = 'Successfully logged into mailbox ' + email_config['EMAIL']
+                else:  # Chinese
+                    if 'gmail' in actual_folder.lower():
+                        actual_folder = 'Junk'
+                    language_map['sm'] = '成功登录邮箱 '+ email_config['EMAIL']
+
+                LOGIN_SUCCESS.append(email_config['EMAIL'])
+                # 使用语言映射构建消息
+                message = language_map['sm']
+                asyncio.run(send_telegram_message(message))
+
+
+
+            # 初始化邮件数量
+            _, msgnums = server.search(None, "ALL")
+            last_email_count = len(msgnums[0].split())
+            logger.debug(f"{email_config['EMAIL']} 的 {actual_folder} 中的初始邮件数量: {last_email_count}")
+
+            def callback(args):
+                if args[2]:
+                    logger.debug(f"服务器通知 {email_config['EMAIL']} 的 {actual_folder} 中有变化")
+                    return True
+                return False
+
+            stop_event = Event()
+
+            while not stop_event.is_set():
+                try:
+                    # 每半小时主动断开并重新连接
+                    current_time = time.time()
+                    if current_time - last_reconnect_time > RECONNECT_INTERVAL:
+                        logger.info(f"{email_config['EMAIL']} 的 {actual_folder} 文件夹重新连接中...")
+                        break  # 跳出内层循环，进行重新连接
+
+                    server.idle(callback=callback, timeout=60)
+
+                    # 检查新邮件
+                    _, msgnums = server.search(None, "ALL")
+                    email_count = len(msgnums[0].split())
+
+                    if email_count > last_email_count:
+                        new_emails = range(last_email_count + 1, email_count + 1)
+                        for num in new_emails:
+                            fetch_email(server, str(num), email_config)
+                        last_email_count = email_count
+
+                    # 成功运行后重置重试计数
+                    retry_count = 0
+
+                except Exception as e:
+                    error_message = f"{email_config['EMAIL']} 的 {actual_folder} 文件夹IDLE循环中出错: {e}"
+                    logger.error(error_message)
+                    retry_count += 1
+
+                    # 发送报错信息到Telegram
+                    asyncio.run(send_telegram_message(
+                        f"Error in IDLE loop for {email_config['EMAIL']} - {actual_folder}: {str(e)}"))
+
+                    time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+
+        except Exception as e:
+            error_message = f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}"
+            logger.error(error_message)
+            retry_count += 1
+
+            # 发送报错信息到Telegram
+            asyncio.run(
+                send_telegram_message(f"Error in idle_mail_listener for {email_config['EMAIL']} - {folder}: {str(e)}"))
+
+            time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+
+        finally:
+            try:
+                server.logout()
+                logger.debug(f"登出 {email_config['EMAIL']} 的文件夹: {actual_folder}")
+            except:
+                pass
+
+        if retry_count >= RETRY_LIMIT:
+            final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。停止监听。"
+            logger.error(final_message)
+
+            # 发送最终停止监听的消息到Telegram
+            asyncio.run(send_telegram_message(final_message))
+            break
+
+        last_reconnect_time = time.time()  # 重新记录连接时间
 def main():
     config = load_config()
-    logger.info("Starting mail listener")
-    server = imaplib2.IMAP4_SSL(config.IMAP_SERVER, config.IMAP_SERVER_PORT)
+    logger.info("Starting mail listener for multiple email accounts")
 
-    try:
-        server.login(config.EMAIL, config.PASSWORD)
-        logger.info("Successfully logged in")
-        # 发送 Telegram 消息
-        # 获取语言设置
-        language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
+    # 假设config.EMAILS是一个字典列表，每个字典包含一个邮箱的配置
+    email_threads = []
+    for email_config in config.EMAILS:
+        thread = threading.Thread(target=monitor_email, args=(email_config,))
+        email_threads.append(thread)
+        thread.start()
 
-        # 定义语言映射
-        language_map = {}
-        if language == 'English':
-            language_map['sm'] = 'Successfully logged in'
-        else:  # Chinese
-            language_map['sm'] = '登录成功'
-
-        # 使用语言映射构建消息
-        message = language_map['sm']
-        asyncio.run(send_telegram_message(message))
-
-        # 为每个文件夹创建一个线程
-        threads = []
-        for folder in FOLDERS:
-            thread = threading.Thread(target=idle_mail_listener, args=(folder,))
-            threads.append(thread)
-            thread.start()
-
-        # 等待所有线程完成
-        for thread in threads:
-            thread.join()
-
-    except Exception as e:
-        logger.error(f"Error in main function: {e}")
-    finally:
-        try:
-            server.logout()
-            logger.info("Logged out from server")
-        except:
-            pass
-
+    for thread in email_threads:
+        thread.join()
 if __name__ == "__main__":
     main()
