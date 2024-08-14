@@ -182,6 +182,10 @@ def fetch_email(server, msg_num, email_config):
 
         language = os.environ.get('LANGUAGE', 'Chinese')
 
+        subject = escape_html(subject)
+        if 'Fwd: ' in subject:
+            subject = subject.replace('Fwd: ', '')
+
         language_map = {}
         if language == 'English':
             language_map['new_email'] = 'New email from '
@@ -196,7 +200,7 @@ def fetch_email(server, msg_num, email_config):
             language_map['date'] = '日期: '
             language_map['content'] = '内容:\n'
 
-        message = (f"<b>{language_map['subject']}</b> {escape_html(subject)}\n"
+        message = (f"<b>{language_map['subject']}</b> {subject}\n"
                    f"<b>{language_map['new_email']}{escape_html(account_email)}:</b>\n"
                    f"<b>{language_map['sender']}</b> {escape_html(from_)}\n"
                    f"<b>{language_map['date']}</b> {formatted_time}\n\n"
