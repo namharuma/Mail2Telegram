@@ -6,7 +6,7 @@ services:
     restart: always
     environment:
       - CONFIG_FILE=/app/config.py
-      - LANGUAGE=Chinese  # or English
-      - TIMEZONE=Asia/Shanghai # set your preferred timezone
+      - LANGUAGE=Chinese  # Chinese or English
+      - TIMEZONE=Asia/Shanghai # 设置你的时区(set your preferred timezone)
     volumes:
       - ./config.py:/app/config.py
