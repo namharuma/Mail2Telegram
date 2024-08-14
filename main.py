@@ -244,7 +244,7 @@ def idle_mail_listener(email_config, folder):
     RETRY_DELAY = config.RETRY_DELAY
     retry_count = 0
 
-    # Determine email provider
+    # 确定邮件提供商
     email_provider = 'gmail' if 'gmail.com' in email_config['EMAIL'] else 'other'
 
     while retry_count < RETRY_LIMIT:
@@ -346,41 +346,46 @@ def idle_mail_listener(email_config, folder):
             error_message = f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}"
             logger.error(error_message)
             retry_count += 1
-
             # 发送报错信息到Telegram
             asyncio.run(
+
                 send_telegram_message(f"Error in idle_mail_listener for {email_config['EMAIL']} - {folder}: {str(e)}"))
 
+            if retry_count >= RETRY_LIMIT:
+                final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。停止监听。"
+
+                logger.error(final_message)
+
+                asyncio.run(send_telegram_message(final_message))
+
+                break  # 当达到重试限制时退出while循环
+
             time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+
 
         finally:
             try:
                 server.logout()
-                logger.debug(f"登出 {email_config['EMAIL']} 的文件夹: {actual_folder}")
+                logger.debug(f"登出 {email_config['EMAIL']} 的文件夹: {folder}")
             except:
                 pass
 
         if retry_count >= RETRY_LIMIT:
-            final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。停止监听。"
-            logger.error(final_message)
-
-            # 发送最终停止监听的消息到Telegram
-            asyncio.run(send_telegram_message(final_message))
-            break
-
+            break  # 确保在达到重试限制时退出循环
         last_reconnect_time = time.time()  # 重新记录连接时间
 def main():
     config = load_config()
-    logger.info("Starting mail listener for multiple email accounts")
+    logger.info("开始监听多个邮箱账户")
 
-    # 假设config.EMAILS是一个字典列表，每个字典包含一个邮箱的配置
     email_threads = []
     for email_config in config.EMAILS:
         thread = threading.Thread(target=monitor_email, args=(email_config,))
         email_threads.append(thread)
         thread.start()
 
-    for thread in email_threads:
-        thread.join()
+    while any(thread.is_alive() for thread in email_threads):
+        time.sleep(60)  # 每分钟检查一次
+
+    logger.info("所有邮件监控线程已停止。程序退出。")
 if __name__ == "__main__":
     main()
