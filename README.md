@@ -15,7 +15,7 @@ cd ./mail2telegram
 
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration information (only supports Outlook email accounts without two-factor authentication)
+   - Fill in the necessary configuration details (only Outlook and Gmail are supported; if your account has 2FA enabled, please obtain an application password from your account)
 
 3. Configure `docker-compose.yml`:
    - Open the `docker-compose.yml` file and add the following environment variables:
@@ -37,27 +37,9 @@ docker-compose up -d
 
 5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
 
-## Best Practices
-
-1. Create or use an infrequently used Outlook email account as a transit mailbox.
-2. Enter the information for this Outlook email in `config.py`.
-3. For all email accounts you want to forward to Telegram:
-   - Enable email forwarding in their respective email settings
-   - Forward emails to the Outlook email created in step 1
-
-## Workflow
-
-```mermaid
-graph TD
-    A[Gmail] --> D[Outlook Transit Mailbox]
-    B[QQ Mail] --> D
-    C[Other Email] --> D
-    D --> E[Telegram]
-```
 
 ## Important Notes
 
-- Only supports Outlook email as the transit mailbox
-- Does not support email accounts with two-factor authentication enabled
-- Ensure your Outlook email security settings allow access by third-party applications
+- Only Outlook and Gmail are supported
+- If your account has 2FA enabled, please obtain an application password from your account
 - Set the correct language and timezone in `docker-compose.yml` for optimal usage
