@@ -42,7 +42,7 @@ RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒
 ```
 
 3. 配置 `docker-compose.yml`：
-   - 打开 `docker-compose.yml` 文件并添加以下环境变量：
+   - 打开 `docker-compose.yml` 文件并修改以下环境变量：
 
 ```yaml
 services:
