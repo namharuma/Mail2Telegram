@@ -45,12 +45,27 @@ RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒
    - 打开 `docker-compose.yml` 文件并修改以下环境变量：
 
 ```yaml
+version: '3.8'
+
 services:
-  mail2telegram:
-    # ... 其他配置 ...
+  email_checker:
+    build: .
+    restart: always
     environment:
-      - LANGUAGE=Chinese  # 或 English
-      - TIMEZONE=Asia/Shanghai  # 设置您的首选时区
+      - CONFIG_FILE=/app/config.py
+      - LANGUAGE=Chinese  # Chinese 或 English
+      - TIMEZONE=Asia/Shanghai # 设置你的时区
+      - ENABLE_LOGGING=true  # 是否开启日志
+      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用, 在项目的tools/send_code.py配置
+    volumes:
+      - ./config.py:/app/config.py
+      - ./log:/app/log
+      - ./tools:/app/tools
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"  # 设置日志文件的最大大小为5MB
+        max-file: "5"   # 保留最多5个日志文件
 ```
 
 4. 启动服务：
