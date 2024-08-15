@@ -10,7 +10,7 @@ import logging
 import time
 from threading import Event
 import asyncio
-from email.header import decode_header
+from email.header import decode_header, make_header
 import pytz
 from telegram.ext import ApplicationBuilder
 from bs4 import BeautifulSoup
@@ -29,7 +29,7 @@ log_file_path = os.path.join(log_directory, "email_checker.log")
 max_log_file_size = int(os.getenv('LOG_MAX_SIZE', 5 * 1024 * 1024))  # 默认 5 MB
 backup_count = int(os.getenv('LOG_MAX_FILE', 5))  # 默认保留 5 个旧日志文件
 
-logging_enabled = os.getenv('ENABLE_LOGGING', 'false').lower() == 'true'
+logging_enabled = os.getenv('ENABLE_LOGGING', 'true').lower() == 'true'
 
 if logging_enabled:
     handler = RotatingFileHandler(log_file_path, maxBytes=max_log_file_size, backupCount=backup_count)
@@ -85,6 +85,8 @@ def get_forwarded_email_info(email_message, account_email):
         return None, None
 
 def escape_html(text):
+    if not isinstance(text, str):
+        text = str(text)
     return html.escape(text)
 
 def clean_html_content(html_content):
@@ -117,31 +119,41 @@ def html_to_text(part):
         return ""
 
 def get_email_content(email_message):
+    logger.debug("开始提取邮件内容")
     content = ""
 
     if email_message.is_multipart():
+        logger.debug("邮件是多部分格式")
         for part in email_message.walk():
             content_type = part.get_content_type()
             content_disposition = str(part.get("Content-Disposition"))
+            logger.debug(f"处理邮件部分 - 类型: {content_type}, 处置: {content_disposition}")
 
             if content_type == "text/html" and "attachment" not in content_disposition:
+                logger.debug("尝试提取HTML内容")
                 content = html_to_text(part)
-                if content:  # 成功解析HTML内容后跳出循环
+                if content:
+                    logger.debug("成功提取HTML内容")
                     break
 
-        # 如果没有成功解析HTML内容，尝试解析纯文本内容
         if not content:
+            logger.debug("未找到HTML内容,尝试提取纯文本内容")
             for part in email_message.walk():
                 content_type = part.get_content_type()
                 content_disposition = str(part.get("Content-Disposition"))
+                logger.debug(f"处理邮件部分 - 类型: {content_type}, 处置: {content_disposition}")
 
                 if content_type == "text/plain" and "attachment" not in content_disposition:
-                    content = decode_part(part)  # 原始的text/plain内容
+                    logger.debug("提取纯文本内容")
+                    content = decode_part(part)
                     content = re.sub(r'\n\s*\n', '\n\n', content).strip()
                     break
     else:
-        content = decode_part(email_message)  # 单一部分的内容
+        logger.debug("邮件是单一部分格式")
+        content = decode_part(email_message)
         content = re.sub(r'\n\s*\n', '\n\n', content).strip()
+
+    logger.debug(f"提取的内容长度: {len(content)}")
 
     # 双重清理以去除所有潜在的HTML标签
     content = clean_html_content(content)
@@ -156,10 +168,11 @@ def get_email_content(email_message):
 
 
 
-async def send_telegram_message(message):
+async def send_telegram_message(message, is_junk=False):
     config = load_config()
     TELEGRAM_BOT_TOKEN = config.TELEGRAM_BOT_TOKEN  # 从配置文件中加载
-    TELEGRAM_CHAT_ID = config.TELEGRAM_CHAT_ID  # 从配置文件中加载
+    # 判断是否发送到Junk Telegram对话
+    TELEGRAM_CHAT_ID = config.TELEGRAM_JUNK_CHAT_ID if is_junk else config.TELEGRAM_CHAT_ID
     app = ApplicationBuilder().token(TELEGRAM_BOT_TOKEN).build()
     await app.bot.send_message(chat_id=TELEGRAM_CHAT_ID, text=message, parse_mode='HTML')
 
@@ -171,23 +184,29 @@ def run_in_thread(loop, coro):
     loop.close()
 
 def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
-    MAX_RETRIES = 3  # 设置最大重试次数
-    logger.debug(f"Fetching email from {folder_name} with message number: {msg_num}")
+    MAX_RETRIES = 3
+    logger.debug(f"开始获取邮件 - 文件夹: {folder_name}, 邮件号: {msg_num}, 重试次数: {retry_count}")
 
     try:
+        logger.debug(f"尝试从服务器获取邮件数据")
         status, data = server.fetch(msg_num, "(RFC822)")
+        logger.debug(f"服务器返回状态: {status}, 数据长度: {len(data) if data else 'None'}")
 
         if status != "OK":
-            raise Exception(f"Failed to fetch email with message number {msg_num}")
+            raise Exception(f"获取邮件失败,状态: {status}")
 
         if len(data) == 0 or not isinstance(data[0], tuple):
-            raise Exception(f"Unexpected data format when fetching email: {data}")
+            raise Exception(f"意外的数据格式: {data}")
 
         if len(data[0]) < 2 or not isinstance(data[0][1], bytes):
-            raise Exception(f"Invalid data structure: {data}")
+            raise Exception(f"无效的数据结构: {data}")
 
         bytes_data = data[0][1]
+        logger.debug(f"成功获取邮件数据, 大小: {len(bytes_data)} bytes")
+
+        logger.debug("开始解析邮件数据")
         email_message = email.message_from_bytes(bytes_data)
+        logger.debug(f"邮件解析完成, 主题: {email_message['Subject']}")
 
         email_date = parsedate_to_datetime(email_message['Date'])
 
@@ -203,11 +222,22 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
 
         logging.info(f"处理邮件，日期: {formatted_time}")
 
+        logger.debug("开始处理邮件头")
         subject, encoding = decode_header(email_message["Subject"])[0]
+        logger.debug(f"原始主题: {subject}, 编码: {encoding}")
         if isinstance(subject, bytes):
-            subject = subject.decode(encoding or 'utf-8', errors='ignore')
+            try:
+                subject = subject.decode(encoding or 'utf-8', errors='ignore')
+                logger.debug(f"解码后的主题: {subject}")
+            except Exception as e:
+                logger.error(f"解码主题时出错: {e}", exc_info=True)
+                subject = "无法解码的主题"
 
         from_ = email_message["From"]
+        logger.debug(f"原始发件人: {from_}")
+        if isinstance(from_, email.header.Header):
+            from_ = str(make_header(decode_header(from_)))
+        logger.debug(f"解码后的发件人: {from_}")
 
         original_recipient, original_sender = get_forwarded_email_info(email_message, email_config['EMAIL'])
 
@@ -228,9 +258,9 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
         language = os.environ.get('LANGUAGE', 'Chinese')
 
         subject = escape_html(subject)
-        if 'Fwd: ' in subject:
-            subject = subject.replace('Fwd: ', '')
 
+
+        # subject = escape_html(subject)
         language_map = {}
         if language == 'English':
             language_map['new_email'] = 'New email from '
@@ -251,27 +281,56 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
                    f"<b>{language_map['date']}</b> {formatted_time}\n\n"
                    f"<b>{language_map['content']}</b>\n{content}")
 
-        # 创建一个新的事件循环
+        is_junk = folder_name.lower() == "junk"
         loop = asyncio.new_event_loop()
-        t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message)))
+        t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message, is_junk)))
         t.start()
         t.join()
 
+
     except Exception as e:
-        logger.error(f"Error fetching email: {e}")
-        # 根据错误类型重试
+        logger.error(f"获取邮件时出错: {e}", exc_info=True)
         if "Unexpected data format" in str(e) and retry_count < MAX_RETRIES:
-            logger.info(f"Retrying fetch operation ({retry_count + 1}/{MAX_RETRIES})...")
-            time.sleep(1)  # 可根据需要调整重试间隔时间
+            logger.info(f"准备重试获取操作 ({retry_count + 1}/{MAX_RETRIES})...")
+            time.sleep(1)
             return fetch_email(server, msg_num, email_config, folder_name, retry_count + 1)
         else:
-            raise  # 超出重试次数或非数据格式问题的异常
+            raise
 
 
 
 def monitor_email(email_config):
     threads = []
-    for folder in FOLDERS:
+    email_provider = 'gmail' if 'gmail.com' in email_config['EMAIL'] else \
+                     'outlook' if 'outlook.com' in email_config['EMAIL'] or 'hotmail.com' in email_config['EMAIL'] else \
+                     'other'
+
+    # 如果是 Gmail 或 Outlook，直接监听 INBOX 和 Junk
+    if email_provider in ['gmail', 'outlook']:
+        folders_to_monitor = FOLDERS  # 监听 INBOX 和 Junk
+    else:
+        # 否则尝试从 IMAP 服务器获取文件夹列表
+        folders_to_monitor = ["INBOX"]  # 默认只监听 INBOX
+        try:
+            server = imaplib2.IMAP4_SSL(email_config['IMAP_SERVER'], email_config['IMAP_SERVER_PORT'])
+            server.login(email_config['EMAIL'], email_config['PASSWORD'])
+            status, folders = server.list()
+
+            if status == "OK" and folders:
+                # 尝试查找类似 Junk 的文件夹
+                junk_folder_candidates = ["Junk", "Spam", "垃圾邮件"]
+                for folder in folders:
+                    folder_name = folder.decode().split(' "/" ')[-1].strip('"')
+                    if any(candidate.lower() in folder_name.lower() for candidate in junk_folder_candidates):
+                        folders_to_monitor.append(folder_name)
+                        break  # 找到类似的 Junk 文件夹后跳出
+
+            server.logout()
+        except Exception as e:
+            logger.error(f"无法获取文件夹列表: {e}")
+            # 如果出错，继续仅监听 INBOX
+
+    for folder in folders_to_monitor:
         thread = threading.Thread(target=idle_mail_listener, args=(email_config, folder))
         threads.append(thread)
         thread.start()
@@ -281,7 +340,7 @@ def monitor_email(email_config):
 
 
 def get_folder_name(folders, folder_type, email_provider):
-    if email_provider == 'gmail':
+    if email_provider in ['gmail', 'outlook']:
         for f in folders:
             decoded = f.decode()
             if f'\\{folder_type}' in decoded:
@@ -369,6 +428,7 @@ def idle_mail_listener(email_config, folder):
                     current_time = time.time()
                     if current_time - last_reconnect_time > RECONNECT_INTERVAL:
                         logger.info(f"{email_config['EMAIL']} 的 {actual_folder} 文件夹重新连接中...")
+                        time.sleep(3)
                         break  # 跳出内层循环，进行重新连接
 
                     server.idle(callback=callback, timeout=60)
@@ -380,22 +440,39 @@ def idle_mail_listener(email_config, folder):
                     if email_count > last_email_count:
                         new_emails = range(last_email_count + 1, email_count + 1)
                         for num in new_emails:
-                            fetch_email(server, str(num), email_config, actual_folder)  # 传递 actual_folder 作为 folder_name
+                            fetch_email(server, str(num), email_config,
+                                        actual_folder)  # 传递 actual_folder 作为 folder_name
                         last_email_count = email_count
 
                     # 成功运行后重置重试计数
                     retry_count = 0
 
-                except Exception as e:
+                except OSError as e:
                     error_message = f"{email_config['EMAIL']} 的 {actual_folder} 文件夹IDLE循环中出错: {e}"
                     logger.error(error_message)
                     retry_count += 1
 
-                    # 发送报错信息到Telegram
-                    asyncio.run(send_telegram_message(
-                        f"Error in IDLE loop for {email_config['EMAIL']} - {actual_folder}: {str(e)}"))
+                    if retry_count >= RETRY_LIMIT:
+                        final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
+                        logger.error(final_message)
+                        asyncio.run(send_telegram_message(final_message))
+                        time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
+                        retry_count = 0  # 重置重试计数以继续重试
+                    else:
+                        time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
 
-                    time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+                except Exception as e:
+                    logger.error(f"Error in IDLE loop for {email_config['EMAIL']} - {actual_folder}: {e}")
+                    retry_count += 1
+
+                    if retry_count >= RETRY_LIMIT:
+                        final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
+                        logger.error(final_message)
+                        asyncio.run(send_telegram_message(final_message))
+                        time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
+                        retry_count = 0  # 重置重试计数以继续重试
+                    else:
+                        time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
 
         except Exception as e:
             logger.error(f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}")

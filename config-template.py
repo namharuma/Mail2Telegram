@@ -15,6 +15,7 @@ EMAILS = [
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
 TELEGRAM_CHAT_ID = 'CHAT_ID'  # 你要把邮件转发到的telegram chat id (The Telegram chat ID where you want to forward emails)
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # 垃圾邮件接收的telegram chat id
 RETRY_LIMIT = 5  # 失败后重试次数 (Number of retry attempts after a failure)
 RETRY_DELAY = 5  # 失败重试时间间隔 (Time interval between retry attempts after a failure)
 RECONNECT_INTERVAL = 1800  # 主动断开重连时间，单位秒 (Interval for proactive disconnection and reconnection, in seconds)
