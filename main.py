@@ -2,6 +2,8 @@ import os
 import re
 import threading
 from email.utils import parsedate_to_datetime
+from logging.handlers import RotatingFileHandler
+
 import imaplib2
 import email
 import logging
@@ -15,16 +17,36 @@ from bs4 import BeautifulSoup
 import html
 import chardet
 
+from tools.extract_verification_code import extract_verification_code
+from tools.send_code import upload
+
 # 配置日志
-logging.basicConfig(level=logging.DEBUG, format='%(asctime)s - %(levelname)s - %(message)s')
+log_directory = "./log"
+os.makedirs(log_directory, exist_ok=True)
+log_file_path = os.path.join(log_directory, "email_checker.log")
+
+# 从环境变量读取日志配置，设置默认值
+max_log_file_size = int(os.getenv('LOG_MAX_SIZE', 5 * 1024 * 1024))  # 默认 5 MB
+backup_count = int(os.getenv('LOG_MAX_FILE', 5))  # 默认保留 5 个旧日志文件
+
+logging_enabled = os.getenv('ENABLE_LOGGING', 'false').lower() == 'true'
+
+if logging_enabled:
+    handler = RotatingFileHandler(log_file_path, maxBytes=max_log_file_size, backupCount=backup_count)
+    logging.basicConfig(level=logging.DEBUG,
+                        format='%(asctime)s - %(levelname)s - %(message)s',
+                        handlers=[handler])
+else:
+    logging.basicConfig(level=logging.CRITICAL, format='%(asctime)s - %(levelname)s - %(message)s')
+
 logger = logging.getLogger(__name__)
 
-
-
+logger.info("日志配置已完成，并启用了大小限制")
 # 要监听的文件夹
 FOLDERS = ["INBOX", "Junk"]
 LOGIN_SUCCESS = []
-
+EVC = None
+EVC = os.getenv('ENABLE_EVC', 'true').lower() == 'true'
 
 def load_config():
     import config
@@ -114,19 +136,24 @@ def get_email_content(email_message):
                 content_disposition = str(part.get("Content-Disposition"))
 
                 if content_type == "text/plain" and "attachment" not in content_disposition:
-                    content = html.unescape(decode_part(part))
+                    content = decode_part(part)  # 原始的text/plain内容
                     content = re.sub(r'\n\s*\n', '\n\n', content).strip()
                     break
     else:
-        content = html.unescape(decode_part(email_message))
+        content = decode_part(email_message)  # 单一部分的内容
         content = re.sub(r'\n\s*\n', '\n\n', content).strip()
+
+    # 双重清理以去除所有潜在的HTML标签
+    content = clean_html_content(content)
+    content = html.unescape(content)  # 转义HTML字符
 
     # 设置最大消息长度（例如3000字符）
     max_length = 3000
     if len(content) > max_length:
         content = content[:max_length] + "..."
 
-    return html.escape(content)
+    return escape_html(content)
+
 
 
 async def send_telegram_message(message):
@@ -143,13 +170,25 @@ def run_in_thread(loop, coro):
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
 
-def fetch_email(server, msg_num, email_config):
-    logger.debug(f"Fetching email with message number: {msg_num}")
-    try:
-        _, data = server.fetch(msg_num, "(RFC822)")
-        _, bytes_data = data[0]
+def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
+    MAX_RETRIES = 3  # 设置最大重试次数
+    logger.debug(f"Fetching email from {folder_name} with message number: {msg_num}")
 
+    try:
+        status, data = server.fetch(msg_num, "(RFC822)")
+
+        if status != "OK":
+            raise Exception(f"Failed to fetch email with message number {msg_num}")
+
+        if len(data) == 0 or not isinstance(data[0], tuple):
+            raise Exception(f"Unexpected data format when fetching email: {data}")
+
+        if len(data[0]) < 2 or not isinstance(data[0][1], bytes):
+            raise Exception(f"Invalid data structure: {data}")
+
+        bytes_data = data[0][1]
         email_message = email.message_from_bytes(bytes_data)
+
         email_date = parsedate_to_datetime(email_message['Date'])
 
         timezone_str = os.environ.get('TIMEZONE', 'Asia/Shanghai')
@@ -179,6 +218,12 @@ def fetch_email(server, msg_num, email_config):
             account_email = email_config['EMAIL']
 
         content = get_email_content(email_message)
+
+        # 提取验证码
+        if EVC:
+            vc = extract_verification_code(content)
+            if vc:
+                upload(vc)
 
         language = os.environ.get('LANGUAGE', 'Chinese')
 
@@ -214,6 +259,14 @@ def fetch_email(server, msg_num, email_config):
 
     except Exception as e:
         logger.error(f"Error fetching email: {e}")
+        # 根据错误类型重试
+        if "Unexpected data format" in str(e) and retry_count < MAX_RETRIES:
+            logger.info(f"Retrying fetch operation ({retry_count + 1}/{MAX_RETRIES})...")
+            time.sleep(1)  # 可根据需要调整重试间隔时间
+            return fetch_email(server, msg_num, email_config, folder_name, retry_count + 1)
+        else:
+            raise  # 超出重试次数或非数据格式问题的异常
+
 
 
 def monitor_email(email_config):
@@ -279,7 +332,6 @@ def idle_mail_listener(email_config, folder):
 
             logger.info(f"成功选择文件夹: {actual_folder}")
 
-
             # 获取语言设置
             language = os.environ.get('LANGUAGE', 'Chinese')  # 默认中文
 
@@ -297,8 +349,6 @@ def idle_mail_listener(email_config, folder):
                 # 使用语言映射构建消息
                 message = language_map['sm']
                 asyncio.run(send_telegram_message(message))
-
-
 
             # 初始化邮件数量
             _, msgnums = server.search(None, "ALL")
@@ -330,7 +380,7 @@ def idle_mail_listener(email_config, folder):
                     if email_count > last_email_count:
                         new_emails = range(last_email_count + 1, email_count + 1)
                         for num in new_emails:
-                            fetch_email(server, str(num), email_config)
+                            fetch_email(server, str(num), email_config, actual_folder)  # 传递 actual_folder 作为 folder_name
                         last_email_count = email_count
 
                     # 成功运行后重置重试计数
@@ -346,8 +396,6 @@ def idle_mail_listener(email_config, folder):
                         f"Error in IDLE loop for {email_config['EMAIL']} - {actual_folder}: {str(e)}"))
 
                     time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
-
-
 
         except Exception as e:
             logger.error(f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}")
@@ -367,6 +415,7 @@ def idle_mail_listener(email_config, folder):
             except:
                 pass
         last_reconnect_time = time.time()  # 重新记录连接时间
+
 
 def main():
     config = load_config()
