@@ -15,7 +15,7 @@ cd ./mail2telegram
 
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration details (only Outlook and Gmail are supported; if your account has 2FA enabled, please obtain an application password from your account)
+   - Fill in the necessary configuration details (if your account has 2FA enabled, please obtain an application password from your account)
 
 ```bash
 EMAILS = [
@@ -80,6 +80,5 @@ docker-compose up -d
 
 ## Important Notes
 
-- Only Outlook and Gmail are supported
 - If your account has 2FA enabled, please obtain an application password from your account
 - Set the correct language and timezone in `docker-compose.yml` for optimal usage
