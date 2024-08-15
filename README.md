@@ -35,6 +35,7 @@ EMAILS = [
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
 TELEGRAM_CHAT_ID = 'CHAT_ID'  # The Telegram chat ID where you want to forward emails
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # Telegram chat ID where junk mail is sent
 RETRY_LIMIT = 5  # Number of retry attempts after a failure
 RETRY_DELAY = 5  # Time interval between retry attempts after a failure
 RECONNECT_INTERVAL = 1800  # Interval for proactive disconnection and reconnection, in seconds
