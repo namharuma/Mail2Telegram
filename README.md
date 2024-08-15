@@ -45,12 +45,27 @@ RETRY_PAUSE = 600  # Pause time after multiple failed retries, in seconds
    - Open the `docker-compose.yml` file and change the following environment variables:
 
 ```yaml
+version: '3.8'
+
 services:
-  mail2telegram:
-    # ... other configurations ...
+  email_checker:
+    build: .
+    restart: always
     environment:
-      - LANGUAGE=English  # or Chinese
-      - TIMEZONE=Asia/Shanghai  # set your preferred timezone
+      - CONFIG_FILE=/app/config.py
+      - LANGUAGE=Chinese  # Chinese or English
+      - TIMEZONE=Asia/Shanghai # Set your timezone
+      - ENABLE_LOGGING=true  # Whether to enable logging
+      - ENABLE_EVC=false # Extended feature, extract email verification code and send to clipboard, use with Jeric-X/SyncClipboard, configure in tools/send_code.py of the project
+    volumes:
+      - ./config.py:/app/config.py
+      - ./log:/app/log
+      - ./tools:/app/tools
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"  # Set the maximum size of log files to 5MB
+        max-file: "5"   # Keep a maximum of 5 log files
 ```
 
 4. Start the service:
