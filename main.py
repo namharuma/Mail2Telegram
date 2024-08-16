@@ -281,7 +281,7 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
                    f"<b>{language_map['date']}</b> {formatted_time}\n\n"
                    f"<b>{language_map['content']}</b>\n{content}")
 
-        is_junk = folder_name.lower() == "junk"
+        is_junk = folder_name.lower() != "junk"
         loop = asyncio.new_event_loop()
         t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message, is_junk)))
         t.start()
@@ -360,35 +360,36 @@ def idle_mail_listener(email_config, folder):
     RETRY_DELAY = config.RETRY_DELAY
     RETRY_PAUSE = config.RETRY_PAUSE  # 新增：重试暂停时间
     retry_count = 0
+    connection_reset_count = 0  # 重置连接次数计数
 
-    # 确定邮件提供商
     email_provider = 'gmail' if 'gmail.com' in email_config['EMAIL'] else 'other'
 
     while retry_count < RETRY_LIMIT:
-        server = imaplib2.IMAP4_SSL(email_config['IMAP_SERVER'], email_config['IMAP_SERVER_PORT'])
-        last_reconnect_time = time.time()
+        server = None
+        last_reconnect_time = time.time()  # 记录最后一次重新连接的时间
 
         try:
+            # 如果已经重试超过3次，则强制断开并重连
+            if connection_reset_count >= 3:
+                logger.info(f"{email_config['EMAIL']} 的 {folder} 文件夹: 尝试彻底断开并重连。")
+                if server:
+                    try:
+                        server.logout()
+                    except:
+                        pass
+                connection_reset_count = 0  # 重置计数
+
+            # 建立新的连接
+            server = imaplib2.IMAP4_SSL(email_config['IMAP_SERVER'], email_config['IMAP_SERVER_PORT'])
             server.login(email_config['EMAIL'], email_config['PASSWORD'])
             logger.info(f"成功登录邮箱 {email_config['EMAIL']}")
 
-            # 列出可用的文件夹
+            # 获取并选择文件夹
             _, folders = server.list()
-
-            # 获取实际的文件夹名称
-            if folder == "INBOX":
-                actual_folder = "INBOX"
-            else:
-                actual_folder = get_folder_name(folders, folder, email_provider)
-
-            if not actual_folder:
-                raise Exception(f"找不到对应的文件夹: {folder}")
-
-            # 选择文件夹
+            actual_folder = get_folder_name(folders, folder, email_provider) or folder
             status, messages = server.select(actual_folder)
             if status != "OK":
                 raise Exception(f"无法选择文件夹 {actual_folder}: {messages}")
-
             logger.info(f"成功选择文件夹: {actual_folder}")
 
             # 获取语言设置
@@ -402,7 +403,7 @@ def idle_mail_listener(email_config, folder):
                 else:  # Chinese
                     if 'gmail' in actual_folder.lower():
                         actual_folder = 'Junk'
-                    language_map['sm'] = '成功登录邮箱 '+ email_config['EMAIL']
+                    language_map['sm'] = '成功登录邮箱 ' + email_config['EMAIL']
 
                 LOGIN_SUCCESS.append(email_config['EMAIL'])
                 # 使用语言映射构建消息
@@ -424,11 +425,12 @@ def idle_mail_listener(email_config, folder):
 
             while not stop_event.is_set():
                 try:
-                    # 每半小时主动断开并重新连接
                     current_time = time.time()
+
+                    # 每隔 RECONNECT_INTERVAL 时间主动断开并重连
                     if current_time - last_reconnect_time > RECONNECT_INTERVAL:
-                        logger.info(f"{email_config['EMAIL']} 的 {actual_folder} 文件夹重新连接中...")
-                        time.sleep(3)
+                        logger.info(f"{email_config['EMAIL']} 的 {actual_folder} 文件夹主动重新连接中...")
+                        last_reconnect_time = time.time()  # 更新最后一次重连时间
                         break  # 跳出内层循环，进行重新连接
 
                     server.idle(callback=callback, timeout=60)
@@ -440,58 +442,53 @@ def idle_mail_listener(email_config, folder):
                     if email_count > last_email_count:
                         new_emails = range(last_email_count + 1, email_count + 1)
                         for num in new_emails:
-                            fetch_email(server, str(num), email_config,
-                                        actual_folder)  # 传递 actual_folder 作为 folder_name
+                            fetch_email(server, str(num), email_config, actual_folder)
                         last_email_count = email_count
 
-                    # 成功运行后重置重试计数
-                    retry_count = 0
+                    retry_count = 0  # 重置重试计数
+                    connection_reset_count = 0  # 成功运行后，重置连接计数
 
                 except OSError as e:
-                    error_message = f"{email_config['EMAIL']} 的 {actual_folder} 文件夹IDLE循环中出错: {e}"
-                    logger.error(error_message)
+                    logger.error(f"{email_config['EMAIL']} 的 {actual_folder} 文件夹IDLE循环中出错: {e}")
                     retry_count += 1
+                    connection_reset_count += 1  # 增加连接重置计数
 
-                    if retry_count >= RETRY_LIMIT:
-                        final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
-                        logger.error(final_message)
-                        asyncio.run(send_telegram_message(final_message))
-                        time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
-                        retry_count = 0  # 重置重试计数以继续重试
-                    else:
-                        time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+                    # 如果重试次数达到限制或连接重置计数达到3，则跳出内层循环以进行彻底重连
+                    if retry_count >= RETRY_LIMIT or connection_reset_count >= 3:
+                        break
 
                 except Exception as e:
                     logger.error(f"Error in IDLE loop for {email_config['EMAIL']} - {actual_folder}: {e}")
                     retry_count += 1
+                    connection_reset_count += 1  # 增加连接重置计数
 
-                    if retry_count >= RETRY_LIMIT:
-                        final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
-                        logger.error(final_message)
-                        asyncio.run(send_telegram_message(final_message))
-                        time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
-                        retry_count = 0  # 重置重试计数以继续重试
-                    else:
-                        time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+                    if retry_count >= RETRY_LIMIT or connection_reset_count >= 3:
+                        break
 
         except Exception as e:
             logger.error(f"{email_config['EMAIL']} 的 {folder} 文件夹idle_mail_listener中出错: {e}")
             retry_count += 1
-            if retry_count >= RETRY_LIMIT:
-                final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
-                logger.error(final_message)
-                asyncio.run(send_telegram_message(final_message))
-                time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
-                retry_count = 0  # 重置重试计数以继续重试
-            else:
-                time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+            connection_reset_count += 1  # 增加连接重置计数
+
         finally:
-            try:
-                server.logout()
-                logger.debug(f"登出 {email_config['EMAIL']} 的文件夹: {folder}")
-            except:
-                pass
-        last_reconnect_time = time.time()  # 重新记录连接时间
+            if server:
+                try:
+                    logger.debug("断开重连")
+                    server.logout()
+                except:
+                    pass
+
+        # 如果达到最大重试次数，发送错误消息并暂停
+        if retry_count >= RETRY_LIMIT:
+            final_message = f"{email_config['EMAIL']} 的 {folder} 文件夹重试次数达到上限。等待 {RETRY_PAUSE // 60} 分钟后重试。"
+            logger.error(final_message)
+            asyncio.run(send_telegram_message(final_message))
+            time.sleep(RETRY_PAUSE)  # 等待指定时间后重试
+            retry_count = 0  # 重置重试计数
+        else:
+            time.sleep(RETRY_DELAY)  # 等待一段时间后再重试
+
+
 
 
 def main():
