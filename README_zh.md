@@ -15,7 +15,7 @@ cd ./mail2telegram
 
 2. 配置 `config.py`：
    - 复制 `config-template.py` 并重命名为 `config.py`
-   - 填写必要的配置信息（仅支持 Outlook 和 Gmail 邮箱，如账号开启2FA，请自行前往账户获取应用密码）
+   - 填写必要的配置信息（如账号开启2FA，请自行前往账户获取应用密码）
 
 ```bash
 EMAILS = [
@@ -34,7 +34,8 @@ EMAILS = [
     # 可以添加更多邮箱配置... 
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
-TELEGRAM_CHAT_ID = 'CHAT_ID'  # 你要把邮件转发到的telegram chat id 
+TELEGRAM_CHAT_ID = 'CHAT_ID'  # 主要邮件转发到的telegram chat id
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # 垃圾邮件转发到的telegram chat id
 RETRY_LIMIT = 5  # 失败后重试次数
 RETRY_DELAY = 5  # 失败重试时间间隔 
 RECONNECT_INTERVAL = 1800  # 主动断开重连时间，单位秒 
@@ -79,6 +80,5 @@ docker-compose up -d
 
 ## 注意事项
 
-- 仅支持 Outlook 和 Gmail 邮箱
 - 如账号开启2FA，请自行前往账户获取应用密码
 - 在 `docker-compose.yml` 中设置正确的语言和时区以获得最佳使用体验

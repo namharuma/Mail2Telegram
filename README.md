@@ -15,7 +15,7 @@ cd ./mail2telegram
 
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration details (only Outlook and Gmail are supported; if your account has 2FA enabled, please obtain an application password from your account)
+   - Fill in the necessary configuration details (if your account has 2FA enabled, please obtain an application password from your account)
 
 ```bash
 EMAILS = [
@@ -35,6 +35,7 @@ EMAILS = [
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
 TELEGRAM_CHAT_ID = 'CHAT_ID'  # The Telegram chat ID where you want to forward emails
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # Telegram chat ID where junk mail is sent
 RETRY_LIMIT = 5  # Number of retry attempts after a failure
 RETRY_DELAY = 5  # Time interval between retry attempts after a failure
 RECONNECT_INTERVAL = 1800  # Interval for proactive disconnection and reconnection, in seconds
@@ -79,6 +80,5 @@ docker-compose up -d
 
 ## Important Notes
 
-- Only Outlook and Gmail are supported
 - If your account has 2FA enabled, please obtain an application password from your account
 - Set the correct language and timezone in `docker-compose.yml` for optimal usage
