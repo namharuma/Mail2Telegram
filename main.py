@@ -282,8 +282,9 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
                    f"<b>{language_map['content']}</b>\n{content}")
 
         is_junk = folder_name.lower() != "junk"
+        logger.debug(f"is_junk = {is_junk},folder_name = {folder_name}")
         loop = asyncio.new_event_loop()
-        t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message, is_junk)))
+        t = threading.Thread(target=run_in_thread, args=(loop, send_telegram_message(message,not is_junk)))
         t.start()
         t.join()
 
