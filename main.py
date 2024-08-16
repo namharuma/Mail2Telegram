@@ -183,6 +183,21 @@ def run_in_thread(loop, coro):
     loop.run_until_complete(loop.shutdown_asyncgens())
     loop.close()
 
+
+def decode_header_string(header):
+    decoded_parts = []
+    for part, encoding in decode_header(header):
+        if isinstance(part, bytes):
+            try:
+                decoded_parts.append(part.decode(encoding or 'utf-8', errors='replace'))
+            except Exception as e:
+                logger.error(f"解码头部时出错: {e}", exc_info=True)
+                decoded_parts.append(part.decode('utf-8', errors='replace'))
+        else:
+            decoded_parts.append(part)
+    return ''.join(decoded_parts)
+
+
 def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
     MAX_RETRIES = 3
     logger.debug(f"开始获取邮件 - 文件夹: {folder_name}, 邮件号: {msg_num}, 重试次数: {retry_count}")
@@ -206,7 +221,10 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
 
         logger.debug("开始解析邮件数据")
         email_message = email.message_from_bytes(bytes_data)
-        logger.debug(f"邮件解析完成, 主题: {email_message['Subject']}")
+        logger.debug(f"邮件解析完成")
+
+        # 记录原始邮件头
+        logger.debug(f"原始邮件头:\n{email_message.as_string()}")
 
         email_date = parsedate_to_datetime(email_message['Date'])
 
@@ -223,20 +241,15 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
         logging.info(f"处理邮件，日期: {formatted_time}")
 
         logger.debug("开始处理邮件头")
-        subject, encoding = decode_header(email_message["Subject"])[0]
-        logger.debug(f"原始主题: {subject}, 编码: {encoding}")
-        if isinstance(subject, bytes):
-            try:
-                subject = subject.decode(encoding or 'utf-8', errors='ignore')
-                logger.debug(f"解码后的主题: {subject}")
-            except Exception as e:
-                logger.error(f"解码主题时出错: {e}", exc_info=True)
-                subject = "无法解码的主题"
+
+        subject = email_message["Subject"]
+        logger.debug(f"原始主题: {subject}")
+        subject = decode_header_string(subject)
+        logger.debug(f"解码后的主题: {subject}")
 
         from_ = email_message["From"]
         logger.debug(f"原始发件人: {from_}")
-        if isinstance(from_, email.header.Header):
-            from_ = str(make_header(decode_header(from_)))
+        from_ = decode_header_string(from_)
         logger.debug(f"解码后的发件人: {from_}")
 
         original_recipient, original_sender = get_forwarded_email_info(email_message, email_config['EMAIL'])
