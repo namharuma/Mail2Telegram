@@ -1,6 +1,5 @@
 import re
 
-
 def extract_verification_code(text):
     keywords = {
         "验证码", "校验码", "检验码", "确认码", "激活码", "动态码", "安全码",
@@ -17,7 +16,6 @@ def extract_verification_code(text):
     patterns = [
         rf'(?:{keyword_pattern})\s*[:：]?\s*([A-Za-z0-9]{{4,8}})\b',  # 匹配关键词后的4-8位字母数字
         rf'(?:{keyword_pattern})\s*[:：]?\s*\n\s*([A-Za-z0-9]{{4,8}})\b',  # 匹配关键词后换行的4-8位字母数字
-        r'\b([A-Za-z0-9]{4,8})\b'  # 匹配独立的4-8位字母数字
     ]
 
     # 尝试所有模式
@@ -28,35 +26,19 @@ def extract_verification_code(text):
 
     return None  # 如果没有找到验证码
 
-
 # # 测试函数
-# test_texts = [
-#     """您好，你正在进行API.66D.EU邮箱验证。
-#     您的验证码为:
-#     0905ef
-#     验证码 10 分钟内有效，如果不是本人操作，请忽略。""",
+# text = """Issue Date: 18 Aug 2024
 #
-#     "Your verification code is: ABC123",
 #
-#     "请输入校验码 5678 完成注册",
+# Update on your Multi-Currency Account interest rate
 #
-#     "To complete your registration, please use the following code:\n9876ZX",
+# iFAST Global Bank is here to notify you that we have made some changes to the interest rate for your Multi-Currency Account, with the following details:
 #
-#     """验证码
+# Currency:
+#  GBP
 #
-# 311412""",
-#
-#     """Verification Code
-#
-#     XY9876""",
-#
-#     "您的動態密碼是：A8B9C0",
-#
-#     "安全代码：\n123456",
-#
-#     "Please enter the authentication CODE: 7890XY"
-# ]
-#
-# for text in test_texts:
-#     code = extract_verification_code(text)
-#     print(f"文本: \n{text}\n提取的验证码: {code}\n")
+# Interest Rate:
+#  4.25% AER (4.17% gross) variable
+# """
+# code = extract_verification_code(text)
+# print(f"文本: \n{text}\n提取的验证码: {code}\n")
