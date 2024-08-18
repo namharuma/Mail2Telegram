@@ -264,9 +264,9 @@ def fetch_email(server, msg_num, email_config, folder_name, retry_count=0):
 
         # 提取验证码
         if EVC:
-            vc = extract_verification_code(content)
-            if vc:
-                upload(vc)
+            extract_verification_code(content)
+            # if vc:
+            #     upload(vc)
 
         language = os.environ.get('LANGUAGE', 'Chinese')
 
