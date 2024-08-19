@@ -1,11 +1,14 @@
+import logging
 import re
 import requests
 
 def extract_verification_code(text):
-
-    url = "http://localhost:48775/extract"
+    print(text)
+    # logging.INFO(text)
+    url = "http://qwen:5000/extract"
     headers = {"Content-Type": "application/json"}
     data = {"text": text}
+    print(data)
     requests.post(url, json=data, headers=headers)
 
 

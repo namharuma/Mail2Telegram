@@ -10,7 +10,7 @@ services:
       - LANGUAGE=Chinese  # Chinese or English
       - TIMEZONE=Asia/Shanghai # 设置你的时区
       - ENABLE_LOGGING=true  # 是否开启日志
-      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用, 在项目的tools/send_code.py配置
+      - ENABLE_EVC=true # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用, 在项目的tools/send_code.py配置
     volumes:
       - ./config.py:/app/config.py
       - ./log:/app/log
@@ -20,3 +20,9 @@ services:
       options:
         max-size: "5m"  # 设置日志文件的最大大小为5MB
         max-file: "5"   # 保留最多5个日志文件
+    networks:
+      - mail2telegram  # 使用共享网络
+
+networks:
+  mail2telegram:
+    external: true  # 使用外部创建的共享网络
