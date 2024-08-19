@@ -18,7 +18,7 @@ import html
 import chardet
 
 from tools.extract_verification_code import extract_verification_code
-from tools.send_code import upload
+
 
 # 配置日志
 log_directory = "./log"

@@ -1,25 +1,15 @@
-import re
 import requests
-import logging
-from tools.send_code import upload
+import logging
+
 def extract_verification_code(text):
+    url = 'http://evc:5788/evc'  # 替换为您的 Flask 应用程序的实际地址
+    headers = {'Content-Type': 'application/json'}
+    data = {'text': text}
 
-    url = "http://qwen:5000/process"
-    prompt_template = "从以下文本中提取验证码。只输出验证码，不要有任何其他文字。如果没有验证码，只输出'None'。\n\n文本：{input_text}\n\n验证码："
-    headers = {"Content-Type": "application/json"}
-    data = {"text": text,"prompt_template":prompt_template}
+    respones =  requests.post(url, headers=headers, json=data)
+    logging.info(respones)
 
-    response = requests.post(url, json=data, headers=headers)
-    # 获取响应的文本内容
-    response_text = response.text
-    print(response_text)  # 打印响应文本，帮助调试
-    # 解析JSON响应
-    response_json = response.json()
-    verification_code = response_json.get("response", "").split('\n')[0].strip()
-    logging.info(f"verification_code:{verification_code}")
-    if verification_code.lower() == 'none':
-        return None
-    upload(verification_code)
+
 
 # def extract_verification_code(text):
 #     keywords = {
