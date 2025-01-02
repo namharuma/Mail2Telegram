@@ -4,6 +4,8 @@
 
 Mail2Telegram 是一个基于 Python 的项目，用于监控电子邮件的新消息，并将其转发到指定的 Telegram 聊天中。
 
+*注意*：由于微软现在修改了outlook的连接方法，需要用户到azure控制台设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用
+
 ## 快速启动 (基于 docker-compose)
 
 1. 克隆仓库并进入项目目录：
