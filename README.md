@@ -72,39 +72,13 @@ RECONNECT_INTERVAL = 1800  # 主动断开重连时间，单位秒
 RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒 
 ```
 
-3. 配置 `docker-compose.yml`：
-   - 打开 `docker-compose.yml` 文件并修改以下环境变量：
-
-```yaml
-services:
-  mail2telegram:
-    build: .
-    container_name: mail2telegram
-    restart: always
-    environment:
-      - CONFIG_FILE=/app/config.py
-      - LANGUAGE=Chinese  # Chinese 或 English
-      - TIMEZONE=Asia/Shanghai # 设置你的时区
-      - ENABLE_LOGGING=true  # 是否开启日志
-      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用
-    volumes:
-      - ./config.py:/app/config.py
-      - ./log:/app/log
-      - ./tools:/app/tools
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "5"
-```
-
-4. 启动服务：
+3. 启动服务：
 
 ```bash
 docker-compose up -d
 ```
 
-5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
+4. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
 
 ## 扩展功能
 
