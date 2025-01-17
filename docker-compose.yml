@@ -18,6 +18,7 @@ services:
       options:
         max-size: "5m"  # 设置日志文件的最大大小为5MB
         max-file: "5"   # 保留最多5个日志文件
+# 扩展内容，若不需要请把下面全部删除
     networks:
       - evc 
 
