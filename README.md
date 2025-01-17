@@ -1,6 +1,5 @@
 ![img](./logo/logo-title.png)
 
-
 <div align="center">
   <a href="./README.md">中文</a> |
   <a href="./readme/README_EN.md">English</a>
@@ -17,13 +16,20 @@
 
 </div>
 
-
-
 # Mail2Telegram
 
 Mail2Telegram 可以监控邮箱并将新邮件转发到 Telegram 聊天中。扩展内容支持提取邮件验证码后发送到剪贴板
 
 >**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用，可以设置邮件转发到其他邮箱
+
+## 📋 目录
+- [快速启动](#快速启动)
+  - [准备工作](#准备工作)
+  - [部署步骤](#部署步骤)
+- [扩展功能](#扩展功能)
+  - [提取邮件验证码并发送至剪贴板](#提取邮件验证码并发送至剪贴板)
+- [致谢](#致谢)
+- [捐赠](#捐赠)
 
 ## 快速启动
 
@@ -47,7 +53,7 @@ cd ./mail2telegram
    - 复制 `config-template.py` 并重命名为 `config.py`
    - 填写必要的配置信息
 
-```bash
+```python
 EMAILS = [
     {
         'EMAIL': 'example@gmail.com',
@@ -80,7 +86,7 @@ services:
       - LANGUAGE=Chinese  # Chinese 或 English
       - TIMEZONE=Asia/Shanghai # 设置你的时区
       - ENABLE_LOGGING=true  # 是否开启日志
-      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用, 在项目的tools/send_code.py配置
+      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用
     volumes:
       - ./config.py:/app/config.py
       - ./log:/app/log
@@ -88,8 +94,8 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "5m"  # 设置日志文件的最大大小为5MB
-        max-file: "5"   # 保留最多5个日志文件
+        max-size: "5m"
+        max-file: "5"
 ```
 
 4. 启动服务：
@@ -99,6 +105,85 @@ docker-compose up -d
 ```
 
 5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
+
+## 扩展功能
+
+### 提取邮件验证码并发送至剪贴板
+
+1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)
+
+2. 部署验证码提取服务 [Heavrnl/ExtractVerificationCode](https://github.com/Heavrnl/ExtractVerificationCode)
+
+```bash
+git clone https://github.com/Heavrnl/ExtractVerificationCode
+```
+```bash
+cd ExtractVerificationCode
+```
+
+配置 `.env` 文件：
+```bash
+cp .env.example .env
+```
+
+
+
+> **注意**：若想要最精确的提取验证码，请使用ai模型，本地正则匹配可能会有误差
+
+启动服务：
+```bash
+docker-compose up -d
+```
+
+3.修改我们本项目中的`docker-compose.yml`文件，重新复制以下内容使用:
+```yaml
+services:
+  mail2telegram:
+    build: .
+    container_name: mail2telegram
+    restart: always
+    environment:
+      - CONFIG_FILE=/app/config.py
+      - LANGUAGE=Chinese  # Chinese or English
+      - TIMEZONE=Asia/Shanghai # 设置你的时区
+      - ENABLE_LOGGING=true  # 是否开启日志
+      - ENABLE_EVC=true # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用
+    volumes:
+      - ./config.py:/app/config.py
+      - ./log:/app/log
+      - ./tools:/app/tools
+    logging:
+      driver: "json-file"
+      options:
+        max-size: "5m"
+        max-file: "5"
+    networks:
+      - evc 
+networks:
+  evc:
+    name: evc
+    driver: bridge
+    external: false
+```
+
+配置 `tools/send_code.py` 文件：
+- 如果验证码提取服务与本项目部署在同一服务器且使用默认端口(5788)，则无需修改
+- 否则需要修改服务地址和端口
+
+```python
+# 替换为您的 ExtractVerificationCode 应用程序的实际地址
+url = 'http://evc:5788/evc'
+```
+
+启动
+```bash
+docker-compose up -d
+```
+
+
+## 致谢
+
+- [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard) - 跨平台剪贴板同步工具
 
 
 ## 捐赠
