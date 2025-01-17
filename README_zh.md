@@ -84,4 +84,3 @@ docker-compose up -d
 ## 注意事项
 
 - 如账号开启2FA，请自行前往账户获取应用密码
-- 在 `docker-compose.yml` 中设置正确的语言和时区以获得最佳使用体验
