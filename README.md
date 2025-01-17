@@ -23,9 +23,18 @@
 
 Mail2Telegram 可以监控邮箱并将新邮件转发到 Telegram 聊天中。扩展内容支持提取邮件验证码后发送到剪贴板
 
->**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用,可以设置邮件转发到其他邮箱
+>**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用，可以设置邮件转发到其他邮箱
 
 ## 快速启动
+
+### 准备工作
+
+以Gmail为例：
+1. 登录Gmail，在设置中开启IMAP/SMTP服务
+2. 若开启2FA，请参考[这里](https://knowledge.workspace.google.com/kb/how-to-create-app-passwords-000009237?hl=zh-cn)获取应用密码
+3. 获取到应用密码后，在config.py中的PASSWORD填写应用密码
+
+### 部署步骤
 
 1. 克隆仓库并进入项目目录：
 
@@ -36,7 +45,7 @@ cd ./mail2telegram
 
 2. 配置 `config.py`：
    - 复制 `config-template.py` 并重命名为 `config.py`
-   - 填写必要的配置信息（**若账号开启2FA，请自行前往账号设置获取应用密码**）
+   - 填写必要的配置信息
 
 ```bash
 EMAILS = [

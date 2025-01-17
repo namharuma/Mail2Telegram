@@ -25,6 +25,15 @@ Mail2Telegram monitors email accounts and forwards new messages to Telegram chat
 
 ## Quick Start
 
+### Preparation
+
+Taking Gmail as an example:
+1. Log in to Gmail and enable IMAP/SMTP service in settings
+2. If 2FA is enabled, please refer to [this guide](https://support.google.com/accounts/answer/185833?hl=en) to obtain an application password
+3. After obtaining the application password, fill it in the PASSWORD field in config.py
+
+### Deployment Steps
+
 1. Clone the repository and navigate to the project directory:
 
 ```bash
@@ -34,7 +43,7 @@ cd ./mail2telegram
 
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration details (**if your account has 2FA enabled, please obtain an application password from your account**)
+   - Fill in the necessary configuration details
 
 ```bash
 EMAILS = [
@@ -90,8 +99,3 @@ docker-compose up -d
 ```
 
 5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
-
-
-## Important Notes
-
-- If your account has 2FA enabled, please obtain an application password from your account
