@@ -51,8 +51,9 @@ RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒
 version: '3.8'
 
 services:
-  email_checker:
+  mail2telegram:
     build: .
+    container_name: mail2telegram
     restart: always
     environment:
       - CONFIG_FILE=/app/config.py
