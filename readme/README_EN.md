@@ -97,3 +97,10 @@ docker-compose up -d
 ```
 
 5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
+
+## Donate
+
+If you find this project helpful, please consider buying me a coffee:
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/0heavrnl)
+
