@@ -1,12 +1,29 @@
+![img](../logo/logo-title.png)
+
+
+<div align="center">
+  <a href="../README.md">中文</a> |
+  <a href="./README_EN.md">English</a>
+</div>
+<br>
+
+
+<div align="center">
+
+[![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)][docker-url] [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-4CAF50?style=flat-square)](https://github.com/Heavrnl/UniversalForumBlock/blob/main/LICENSE) 
+
+[docker-url]: https://hub.docker.com/r/heavrnl/universalforumblock
+
+
+</div>
+
 # Mail2Telegram
 
-[中文](./README_zh.md) | English
+Mail2Telegram monitors email accounts and forwards new messages to Telegram chats. Extended features support extracting email verification codes and sending them to the clipboard.
 
-Mail2Telegram is a Python-based project that monitors email accounts for new messages and forwards them to specified Telegram chats.
+>**Note:** Due to Microsoft's changes to the Outlook connection method, users need to configure several settings, making the process quite cumbersome. As a result, Outlook email cannot be used in this project.
 
-**Note:** Due to Microsoft's recent changes to the Outlook connection method, users now need to configure several settings in the Azure Console, making the process quite cumbersome. As a result, Outlook email cannot be used in this project.
-
-## Quick Start (using docker-compose)
+## Quick Start
 
 1. Clone the repository and navigate to the project directory:
 
@@ -17,16 +34,10 @@ cd ./mail2telegram
 
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration details (if your account has 2FA enabled, please obtain an application password from your account)
+   - Fill in the necessary configuration details (**if your account has 2FA enabled, please obtain an application password from your account**)
 
 ```bash
 EMAILS = [
-    {
-        'EMAIL': 'example@outlook.com',
-        'PASSWORD': 'password/application password',
-        'IMAP_SERVER': 'outlook.office365.com',
-        'IMAP_SERVER_PORT': 993,
-    },
     {
         'EMAIL': 'example@gmail.com',
         'PASSWORD': 'password/application password',
@@ -36,8 +47,8 @@ EMAILS = [
     # You can add more email configurations...
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
-TELEGRAM_CHAT_ID = 'CHAT_ID'  # The Telegram chat ID where you want to forward emails
-TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # Telegram chat ID where junk mail is sent
+TELEGRAM_CHAT_ID = 'CHAT_ID'  # The main Telegram chat ID where you want to forward emails, can be your USER_ID
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # Telegram chat ID where junk mail is sent, can be your USER_ID
 RETRY_LIMIT = 5  # Number of retry attempts after a failure
 RETRY_DELAY = 5  # Time interval between retry attempts after a failure
 RECONNECT_INTERVAL = 1800  # Interval for proactive disconnection and reconnection, in seconds
@@ -48,6 +59,8 @@ RETRY_PAUSE = 600  # Pause time after multiple failed retries, in seconds
    - Open the `docker-compose.yml` file and change the following environment variables:
 
 ```yaml
+version: '3.8'
+
 services:
   mail2telegram:
     build: .

@@ -36,7 +36,7 @@ cd ./mail2telegram
 
 2. 配置 `config.py`：
    - 复制 `config-template.py` 并重命名为 `config.py`
-   - 填写必要的配置信息（如账号开启2FA，请自行前往账户获取应用密码）
+   - 填写必要的配置信息（**若账号开启2FA，请自行前往账号设置获取应用密码**）
 
 ```bash
 EMAILS = [
@@ -93,7 +93,3 @@ docker-compose up -d
 
 5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
 
-
-## 注意事项
-
-- 如账号开启2FA，请自行前往账户获取应用密码
