@@ -35,9 +35,11 @@ Mail2Telegram 可以实时监控多个邮箱并将邮件发送到 Telegram 中�
 ### 准备工作
 
 以Gmail为例：
-1. 登录Gmail，在设置中开启IMAP/SMTP服务
+1. 登录Gmail，在设置中开启IMAP访问服务
 2. 若开启2FA，请参考[这里](https://support.google.com/mail/answer/185833?hl=zh-Hans)获取应用密码
 3. 获取到应用密码后，在config.py中的PASSWORD填写应用密码
+
+（其他邮箱同理，请自行前往邮箱设置开启IMAP访问服务）
 
 ### 部署步骤
 
