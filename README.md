@@ -100,3 +100,10 @@ docker-compose up -d
 
 5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
 
+
+## 捐赠
+
+如果你觉得这个项目对你有帮助，欢迎通过以下方式请我喝杯咖啡：
+
+[![ko-fi](https://ko-fi.com/img/githubbutton_sm.svg)](https://ko-fi.com/0heavrnl)
+
