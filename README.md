@@ -9,16 +9,16 @@
 
 <div align="center">
 
-[![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)][docker-url] [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-4CAF50?style=flat-square)](https://github.com/Heavrnl/mail2telegram/blob/master/LICENSE) 
+![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&logo=docker&logoColor=white) [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-4CAF50?style=flat-square)](https://github.com/Heavrnl/mail2telegram/blob/master/LICENSE) 
 
-[docker-url]: https://hub.docker.com/r/heavrnl/universalforumblock
+
 
 
 </div>
 
 # Mail2Telegram
 
-Mail2Telegram 可以实时监控邮箱并将新邮件发送到 Telegram 中。扩展内容支持提取邮件验证码后发送到剪贴板
+Mail2Telegram 可以实时监控邮箱并将新邮件发送到 Telegram 中。扩展功能支持提取邮件验证码后发送到剪贴板
 
 >**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用，可以设置邮件转发到其他邮箱
 
@@ -89,8 +89,9 @@ docker-compose up -d
 ## 扩展功能
 
 ### 提取邮件验证码并发送至剪贴板
+支持本地正则匹配和AI（[Github Model](https://docs.github.com/zh/github-models/prototyping-with-ai-models)/[Gemini](https://aistudio.google.com/apikey)）提取验证码，具体配置在下面`Heavrnl/ExtractVerificationCode`中说明
 
-1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)，请自行前往该仓库查看部署方法
+1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)，请自行前往该项目查看部署方法
 
 2. 部署验证码提取服务 [Heavrnl/ExtractVerificationCode](https://github.com/Heavrnl/ExtractVerificationCode)
 
