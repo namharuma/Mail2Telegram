@@ -1,8 +1,9 @@
 import requests
-import logging
+
+import logging
 
 def extract_verification_code(text):
-    url = 'http://evc:5788/evc'  # 替换为您的 Flask 应用程序的实际地址
+    url = 'http://evc:5788/evc'  # 替换为您的 evc 应用程序的实际地址
     headers = {'Content-Type': 'application/json'}
     data = {'text': text}
 
