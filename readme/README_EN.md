@@ -21,16 +21,6 @@
 Mail2Telegram monitors email accounts and forwards new messages to Telegram chats in real-time. Extended features support extracting email verification codes and sending them to the clipboard.
 
 
-
-## 📋 Table of Contents
-- [Quick Start](#quick-start)
-  - [Preparation](#preparation)
-  - [Deployment Steps](#deployment-steps)
-- [Extended Features](#extended-features)
-  - [Extract Verification Code to Clipboard](#extract-verification-code-to-clipboard)
-- [Acknowledgments](#acknowledgments)
-- [Donate](#donate)
-
 ## Quick Start
 
 ### Preparation
