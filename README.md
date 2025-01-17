@@ -82,4 +82,3 @@ docker-compose up -d
 ## Important Notes
 
 - If your account has 2FA enabled, please obtain an application password from your account
-- Set the correct language and timezone in `docker-compose.yml` for optimal usage
