@@ -20,7 +20,7 @@
 
 Mail2Telegram monitors email accounts and forwards new messages to Telegram chats in real-time. Extended features support extracting email verification codes and sending them to the clipboard.
 
->**Note:** Due to Microsoft's changes to the Outlook connection method, users need to configure several settings, making the process quite cumbersome. As a result, Outlook email cannot be used in this project. You can set up email forwarding to another email address as an alternative.
+
 
 ## 📋 Table of Contents
 - [Quick Start](#quick-start)
@@ -52,7 +52,7 @@ cd ./mail2telegram
 2. Configure `config.py`:
    - Copy `config-template.py` and rename it to `config.py`
    - Fill in the necessary configuration details
-
+>**Note:** Due to Microsoft's changes to the Outlook connection method, users need to configure several settings, making the process quite cumbersome. As a result, Outlook email cannot be used in this project. You can set up email forwarding to another email address as an alternative.
 ```python
 EMAILS = [
     {
