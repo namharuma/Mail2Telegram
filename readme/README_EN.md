@@ -89,7 +89,7 @@ docker-compose up -d
 ## Extended Features
 
 ### Extract Verification Code to Clipboard
-Supports local regex matching and AI ([Github Model](https://docs.github.com/en/github-models/prototyping-with-ai-models)/[Gemini](https://aistudio.google.com/apikey)) for extracting verification codes. Detailed configuration is explained in the `Heavrnl/ExtractVerificationCode` section below.
+Supports local regex matching and AI ([GitHub Models](https://docs.github.com/en/github-models/prototyping-with-ai-models)/[Gemini](https://aistudio.google.com/apikey)) for extracting verification codes. Detailed configuration is explained in the `Heavrnl/ExtractVerificationCode` section below.
 
 1. Deploy the clipboard sync service [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard). Please visit their project page for deployment instructions.
 

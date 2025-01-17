@@ -89,7 +89,7 @@ docker-compose up -d
 ## 扩展功能
 
 ### 提取邮件验证码并发送至剪贴板
-支持本地正则匹配和AI（[Github Model](https://docs.github.com/zh/github-models/prototyping-with-ai-models)/[Gemini](https://aistudio.google.com/apikey)）提取验证码，具体配置在下面`Heavrnl/ExtractVerificationCode`中说明
+支持本地正则匹配和AI（[GitHub Models](https://docs.github.com/zh/github-models/prototyping-with-ai-models)/[Gemini](https://aistudio.google.com/apikey)）提取验证码，具体配置在下面说明
 
 1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)，请自行前往该项目查看部署方法
 
