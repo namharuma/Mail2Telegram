@@ -45,7 +45,7 @@ Taking Gmail as an example:
 1. Clone the repository and navigate to the project directory:
 
 ```bash
-git clone https://github.com/Heavrnl/mail2telegram
+git clone https://github.com/Heavrnl/Mail2Telegram.git
 cd ./mail2telegram
 ```
 

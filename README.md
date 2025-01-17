@@ -45,7 +45,7 @@ Mail2Telegram 可以实时监控邮箱并将新邮件发送到 Telegram 中。�
 1. 克隆仓库并进入项目目录：
 
 ```bash
-git clone https://github.com/Heavrnl/mail2telegram
+git clone https://github.com/Heavrnl/Mail2Telegram.git
 cd ./mail2telegram
 ```
 
