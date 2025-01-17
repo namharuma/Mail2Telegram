@@ -1,14 +1,14 @@
 EMAILS = [
     {
-        'EMAIL': 'example@outlook.com',
-        'PASSWORD': 'password/application password',
-        'IMAP_SERVER': 'outlook.office365.com',
-        'IMAP_SERVER_PORT': 993,
-    },
-    {
         'EMAIL': 'example@gmail.com',
         'PASSWORD': 'password/application password',
         'IMAP_SERVER': 'imap.gmail.com',
+        'IMAP_SERVER_PORT': 993,
+    },
+    {
+        'EMAIL': 'example@qq.com',
+        'PASSWORD': 'password',
+        'IMAP_SERVER': 'imap.qq.com',
         'IMAP_SERVER_PORT': 993,
     },
     # 可以添加更多邮箱配置... (You can add more email configurations...)

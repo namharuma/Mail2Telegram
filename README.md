@@ -22,7 +22,7 @@ Mail2Telegram 可以监控邮箱并将新邮件转发到 Telegram 聊天中。�
 
 >**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用，可以设置邮件转发到其他邮箱
 
-## 📋 目录
+##  目录
 - [快速启动](#快速启动)
   - [准备工作](#准备工作)
   - [部署步骤](#部署步骤)
@@ -61,6 +61,12 @@ EMAILS = [
         'IMAP_SERVER': 'imap.gmail.com',
         'IMAP_SERVER_PORT': 993,
     },
+    {
+        'EMAIL': 'example@qq.com',
+        'PASSWORD': 'password/application password',
+        'IMAP_SERVER': 'imap.qq.com',
+        'IMAP_SERVER_PORT': 993,
+    },
     # 可以添加更多邮箱配置... 
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
@@ -84,7 +90,7 @@ docker-compose up -d
 
 ### 提取邮件验证码并发送至剪贴板
 
-1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)
+1. 部署剪贴板同步服务 [Jeric-X/SyncClipboard](https://github.com/Jeric-X/SyncClipboard)，请自行前往该仓库查看部署方法
 
 2. 部署验证码提取服务 [Heavrnl/ExtractVerificationCode](https://github.com/Heavrnl/ExtractVerificationCode)
 
@@ -95,11 +101,39 @@ git clone https://github.com/Heavrnl/ExtractVerificationCode
 cd ExtractVerificationCode
 ```
 
-配置 `.env` 文件：
+配置 `.env` 文件，把上面部署好的剪贴板同步服务相关配置填入：
 ```bash
 cp .env.example .env
 ```
+```ini
+# 选择使用的API类型：azure 或 gemini
+API_TYPE=gemini
 
+# 是否启用本地正则匹配提取验证码（启用后会优先使用本地匹配，失败后再尝试API）
+USE_LOCAL=false
+
+# Prompt模板
+PROMPT_TEMPLATE=从以下文本中提取验证码。只输出验证码，不要有任何其他文字。如果没有验证码，只输出'None'。\n\n文本：{input_text}\n\n验证码：
+
+# Azure API相关配置
+AZURE_ENDPOINT=https://models.inference.ai.azure.com
+AZURE_MODEL_NAME=gpt-4o-mini
+
+# Gemini API相关配置
+GEMINI_API_KEY=
+GEMINI_MODEL=gemini-1.5-flash
+
+# Azure API认证Token（使用GitHub Token进行认证）
+GITHUB_TOKEN=
+
+# 剪贴板同步配置
+SYNC_URL=your_sync_url
+SYNC_USERNAME=your_username
+SYNC_TOKEN=your_token
+
+# 是否开启调试模式（true/false）
+DEBUG_MODE=false
+```
 
 
 > **注意**：若想要最精确的提取验证码，请使用ai模型，本地正则匹配可能会有误差
@@ -109,36 +143,8 @@ cp .env.example .env
 docker-compose up -d
 ```
 
-3.修改我们本项目中的`docker-compose.yml`文件，重新复制以下内容使用:
-```yaml
-services:
-  mail2telegram:
-    build: .
-    container_name: mail2telegram
-    restart: always
-    environment:
-      - CONFIG_FILE=/app/config.py
-      - LANGUAGE=Chinese  # Chinese or English
-      - TIMEZONE=Asia/Shanghai # 设置你的时区
-      - ENABLE_LOGGING=true  # 是否开启日志
-      - ENABLE_EVC=true # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用
-    volumes:
-      - ./config.py:/app/config.py
-      - ./log:/app/log
-      - ./tools:/app/tools
-    logging:
-      driver: "json-file"
-      options:
-        max-size: "5m"
-        max-file: "5"
-    networks:
-      - evc 
-networks:
-  evc:
-    name: evc
-    driver: bridge
-    external: false
-```
+3.修改我们本项目中的`docker-compose.yml`文件，把`ENABLE_EVC=false`改为`ENABLE_EVC=true`
+
 
 配置 `tools/send_code.py` 文件：
 - 如果验证码提取服务与本项目部署在同一服务器且使用默认端口(5788)，则无需修改
@@ -153,6 +159,17 @@ url = 'http://evc:5788/evc'
 ```bash
 docker-compose up -d
 ```
+
+## 关于隐私
+
+ExtractVerificationCode 项目在处理邮件内容时采取了以下安全措施：
+
+1. 邮件文本脱敏处理：在发送给 AI 模型前会自动移除敏感信息
+2. 文本筛选：只有包含验证码相关内容的文本才会被发送给AI模型，不会全部邮件都发送
+
+
+若还是怕AI提供商获取你的信息，可以本地部署大模型或者只用本地正则匹配提取验证码
+
 
 
 ## 致谢
