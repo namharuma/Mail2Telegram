@@ -70,8 +70,6 @@ RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒
    - 打开 `docker-compose.yml` 文件并修改以下环境变量：
 
 ```yaml
-version: '3.8'
-
 services:
   mail2telegram:
     build: .
