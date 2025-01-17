@@ -4,3 +4,4 @@ config.yml
 !.gitignore
 logs/*
 config.py
+logo/logo-title.svg

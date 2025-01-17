@@ -1,53 +1,68 @@
+![img](./logo/logo-title.png)
+
+
+<div align="center">
+  <a href="./README.md">中文</a> |
+  <a href="./readme/README_EN.md">English</a>
+</div>
+<br>
+
+
+<div align="center">
+
+[![Docker](https://img.shields.io/badge/-Docker-2496ED?style=flat-square&logo=docker&logoColor=white)][docker-url] [![License: GPL-3.0](https://img.shields.io/badge/License-GPL%203.0-4CAF50?style=flat-square)](https://github.com/Heavrnl/UniversalForumBlock/blob/main/LICENSE) 
+
+[docker-url]: https://hub.docker.com/r/heavrnl/universalforumblock
+
+
+</div>
+
+
+
 # Mail2Telegram
 
-[中文](./README_zh.md) | English
+Mail2Telegram 可以监控邮箱并将新邮件转发到 Telegram 聊天中。扩展内容支持提取邮件验证码后发送到剪贴板
 
-Mail2Telegram is a Python-based project that monitors email accounts for new messages and forwards them to specified Telegram chats.
+>**注意**：由于微软修改了outlook的连接方法，需要用户到设置相当多东西，十分繁琐，所以现在outlook邮箱无法在此项目中使用
 
-**Note:** Due to Microsoft's recent changes to the Outlook connection method, users now need to configure several settings in the Azure Console, making the process quite cumbersome. As a result, Outlook email cannot be used in this project.
+## 快速启动
 
-## Quick Start (using docker-compose)
-
-1. Clone the repository and navigate to the project directory:
+1. 克隆仓库并进入项目目录：
 
 ```bash
 git clone https://github.com/Heavrnl/mail2telegram
 cd ./mail2telegram
 ```
 
-2. Configure `config.py`:
-   - Copy `config-template.py` and rename it to `config.py`
-   - Fill in the necessary configuration details (if your account has 2FA enabled, please obtain an application password from your account)
+2. 配置 `config.py`：
+   - 复制 `config-template.py` 并重命名为 `config.py`
+   - 填写必要的配置信息（如账号开启2FA，请自行前往账户获取应用密码）
 
 ```bash
 EMAILS = [
-    {
-        'EMAIL': 'example@outlook.com',
-        'PASSWORD': 'password/application password',
-        'IMAP_SERVER': 'outlook.office365.com',
-        'IMAP_SERVER_PORT': 993,
-    },
     {
         'EMAIL': 'example@gmail.com',
         'PASSWORD': 'password/application password',
         'IMAP_SERVER': 'imap.gmail.com',
         'IMAP_SERVER_PORT': 993,
     },
-    # You can add more email configurations...
+    # 可以添加更多邮箱配置... 
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
-TELEGRAM_CHAT_ID = 'CHAT_ID'  # The Telegram chat ID where you want to forward emails
-TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # Telegram chat ID where junk mail is sent
-RETRY_LIMIT = 5  # Number of retry attempts after a failure
-RETRY_DELAY = 5  # Time interval between retry attempts after a failure
-RECONNECT_INTERVAL = 1800  # Interval for proactive disconnection and reconnection, in seconds
-RETRY_PAUSE = 600  # Pause time after multiple failed retries, in seconds
+TELEGRAM_CHAT_ID = 'CHAT_ID'  # 主要邮件转发到的chat id，可以是自己的USERID
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # 垃圾邮件转发到的chat id，可以是自己的USERID
+RETRY_LIMIT = 5  # 失败后重试次数
+RETRY_DELAY = 5  # 失败重试时间间隔 
+RECONNECT_INTERVAL = 1800  # 主动断开重连时间，单位秒 
+RETRY_PAUSE = 600  # 重试多次失败后，停止时间，单位秒 
 ```
 
-3. Configure `docker-compose.yml`:
-   - Open the `docker-compose.yml` file and change the following environment variables:
+3. 配置 `docker-compose.yml`：
+   - 打开 `docker-compose.yml` 文件并修改以下环境变量：
 
 ```yaml
+version: '3.8'
+
 services:
   mail2telegram:
     build: .
@@ -55,10 +70,10 @@ services:
     restart: always
     environment:
       - CONFIG_FILE=/app/config.py
-      - LANGUAGE=Chinese  # Chinese or English
-      - TIMEZONE=Asia/Shanghai # Set your timezone
-      - ENABLE_LOGGING=true  # Whether to enable logging
-      - ENABLE_EVC=false # Extended feature, extract email verification code and send to clipboard, use with Jeric-X/SyncClipboard, configure in tools/send_code.py of the project
+      - LANGUAGE=Chinese  # Chinese 或 English
+      - TIMEZONE=Asia/Shanghai # 设置你的时区
+      - ENABLE_LOGGING=true  # 是否开启日志
+      - ENABLE_EVC=false # 扩展功能，提取邮件验证码后发送到剪贴板，搭配 Jeric-X/SyncClipboard 使用, 在项目的tools/send_code.py配置
     volumes:
       - ./config.py:/app/config.py
       - ./log:/app/log
@@ -66,19 +81,19 @@ services:
     logging:
       driver: "json-file"
       options:
-        max-size: "5m"  # Set the maximum size of log files to 5MB
-        max-file: "5"   # Keep a maximum of 5 log files
+        max-size: "5m"  # 设置日志文件的最大大小为5MB
+        max-file: "5"   # 保留最多5个日志文件
 ```
 
-4. Start the service:
+4. 启动服务：
 
 ```bash
 docker-compose up -d
 ```
 
-5. The service is running successfully when you receive a "Successfully logged in" message from the Telegram bot.
+5. 当您收到 Telegram 机器人发送的"登录成功"消息时，表示服务已成功运行。
 
 
-## Important Notes
+## 注意事项
 
-- If your account has 2FA enabled, please obtain an application password from your account
+- 如账号开启2FA，请自行前往账户获取应用密码
