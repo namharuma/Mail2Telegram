@@ -37,7 +37,7 @@ Mail2Telegram 可以实时监控多个邮箱并将邮件发送到 Telegram 中�
 
 ```bash
 git clone https://github.com/Heavrnl/Mail2Telegram.git
-cd ./mail2telegram
+cd ./Mail2Telegram
 ```
 
 2. 配置 `config.py`：
