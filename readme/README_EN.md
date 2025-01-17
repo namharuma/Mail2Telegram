@@ -21,7 +21,7 @@
 
 Mail2Telegram monitors email accounts and forwards new messages to Telegram chats. Extended features support extracting email verification codes and sending them to the clipboard.
 
->**Note:** Due to Microsoft's changes to the Outlook connection method, users need to configure several settings, making the process quite cumbersome. As a result, Outlook email cannot be used in this project.
+>**Note:** Due to Microsoft's changes to the Outlook connection method, users need to configure several settings, making the process quite cumbersome. As a result, Outlook email cannot be used in this project. You can set up email forwarding to another email address as an alternative.
 
 ## Quick Start
 
