@@ -18,7 +18,7 @@
 
 # Mail2Telegram
 
-Mail2Telegram 可以实时监控邮箱并将新邮件发送到 Telegram 中。扩展功能支持提取邮件验证码后发送到剪贴板
+Mail2Telegram 可以实时监控多个邮箱并将邮件发送到 Telegram 中。扩展功能支持提取邮件验证码后发送到剪贴板
 
 
 ## 📋 目录
