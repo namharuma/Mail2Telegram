@@ -30,6 +30,8 @@ Mail2Telegram 可以实时监控多个邮箱并将邮件发送到 Telegram 中�
 3. 获取到应用密码后，在config.py中的PASSWORD填写应用密码
 
 （其他邮箱同理，请自行前往邮箱设置开启IMAP访问服务）
+>**注意**：由于微软修改了outlook的连接方法，需要用户设置相当多东西，十分繁琐，所以现在outlook邮箱无法在本项目中使用，可以设置邮件转发到其他邮箱
+
 
 ### 部署步骤
 
@@ -44,7 +46,6 @@ cd ./Mail2Telegram
    - 复制 `config-template.py` 并重命名为 `config.py`
    - 填写必要的配置信息
 
->**注意**：由于微软修改了outlook的连接方法，需要用户设置相当多东西，十分繁琐，所以现在outlook邮箱无法在本项目中使用，可以设置邮件转发到其他邮箱
 ```python
 EMAILS = [
     {
