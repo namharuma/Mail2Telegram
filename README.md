@@ -63,8 +63,8 @@ EMAILS = [
     # 可以添加更多邮箱配置... 
 ]
 TELEGRAM_BOT_TOKEN = 'BOT_TOKEN'
-TELEGRAM_CHAT_ID = 'CHAT_ID'  # 主要邮件转发到的chat id，可以是自己的USERID
-TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # 垃圾邮件转发到的chat id，可以是自己的USERID
+TELEGRAM_CHAT_ID = 'CHAT_ID'  # 主要邮件转发到的chat_id，可以是自己的user_id
+TELEGRAM_JUNK_CHAT_ID = 'CHAT_ID' # 垃圾邮件转发到的chat_id，可以是自己的user_id
 RETRY_LIMIT = 5  # 失败后重试次数
 RETRY_DELAY = 5  # 失败重试时间间隔 
 RECONNECT_INTERVAL = 1800  # 主动断开重连时间，单位秒 
